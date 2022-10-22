@@ -3,16 +3,19 @@
 
 //*** Mandelbrot set properties ***//
 
-// Type for integer coordinates
+/// Type for integer coordinates
 typedef long long int coord_t;
 
-// Mandelbrot iterations number after which point considered to be in set 
+/// Mandelbrot iterations number after which point considered to be in set 
 extern const size_t ITER_MAX;
 
-// Wrapper for graphics library pixel array representation
+/// Wrapper for graphics library pixel array representation
 struct PixelArray;
 
-// Mandelbrot set parameteres
+/// Wrapper for graphic library window class
+struct GraphWindow;
+
+/// Mandelbrot set parameteres
 struct MandelbrotSet {
     coord_t x_max;
     coord_t x_min;
@@ -23,17 +26,39 @@ struct MandelbrotSet {
     coord_t y_center;
 };
 
-// Routine for computing pixel colors on screen
+/// Routine for computing pixel colors on screen
 void drawMandelbrotSet(PixelArray *points, size_t width, size_t height, MandelbrotSet *mdb_set);
 
 
 //*** Graphics library interfaces ***//
 
-// Set pixel color
-void setPixel(PixelArray *points, size_t px, size_t py, size_t color_code);
+/// Get drawing array
+PixelArray *initPixelArray();
 
-// Init window and start graphic library main loop
-void run(size_t width, size_t height, MandelbrotSet *mdb_set);
+/// Free pixel array resources
+void destrPixelArray(PixelArray *array);
+
+/// Get graphic library window wrapper
+GraphWindow *initWindow(size_t width, size_t height);
+
+/// Free window resources
+void destrWindow(GraphWindow *window);
+
+/// Check if window opened
+int isOpen(const GraphWindow *window);
+
+/// Handle window events (e.g. key pressed).
+/// Return 1 if window needs redrawing. Otherwise return 0.
+void handleWindowEvents(GraphWindow *window);
+
+/// Draw \p pixels in memory
+void draw(GraphWindow *window, PixelArray *pixels);
+
+/// Update image on the screen
+void display(GraphWindow *window);
+
+/// Set pixel color
+void setPixel(PixelArray *points, size_t px, size_t py, size_t color_code);
 
 
 //*** Helpers for fixed precision arithmetic ***//

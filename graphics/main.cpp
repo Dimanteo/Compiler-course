@@ -55,6 +55,10 @@ void drawMandelbrotSet(PixelArray *points, size_t width, size_t height, Mandelbr
     }
 }
 
+void zoom(MandelbrotSet *mdb_set) {
+    mdb_set->scale = mul(mdb_set->scale, getcoord(0.8));;
+}
+
 int main() {
     size_t width = 600;
     size_t height = 600;
@@ -66,12 +70,35 @@ int main() {
         .y_max = getcoord(1.7),
         .y_min = getcoord(-1.7),
         .scale = getcoord(1),
-        .x_center = 0,
-        .y_center = 0
+        .x_center = getcoord(-0.7436438870),
+        .y_center = getcoord(0.13182590)
     };
 
-    // Start main drawing loop
-    run(width, height, &mdb_set);
+    PixelArray *points = initPixelArray();
+    GraphWindow *window = initWindow(width, height);
+    size_t iterations = 0;
+    size_t step_number = 35;
+
+    // Main loop
+    while (step_number && isOpen(window)) {
+        // Handle pressed keys
+        handleWindowEvents(window);
+
+        // Animate
+        if (iterations == 0) {
+            zoom(&mdb_set);
+            drawMandelbrotSet(points, width, height, &mdb_set);
+            step_number--;
+        }
+
+        draw(window, points);
+        display(window);
+
+        iterations = (iterations + 1) % 2;
+    }
+
+    destrPixelArray(points);
+    destrWindow(window);
 
     return 0;
 }

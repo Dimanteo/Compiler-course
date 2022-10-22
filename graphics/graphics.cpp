@@ -15,34 +15,54 @@ struct PixelArray {
     sf::VertexArray pixels;
 };
 
-void run(size_t width, size_t height, MandelbrotSet *mdb_set) {
-    PixelArray points;
-    sf::RenderWindow window(sf::VideoMode(width, height), "Mandelbrot");
-    window.setFramerateLimit(60);
-    drawMandelbrotSet(&points, width, height, mdb_set);
+PixelArray *initPixelArray() {
+    PixelArray *array = new PixelArray();
+    return array;
+}
 
-    // Main loop
-    while (window.isOpen()) {
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            switch (event.type) {
-                case sf::Event::Closed:
-                    window.close();
-                    break;
-                case sf::Event::KeyPressed:
-                    handleKey(event, mdb_set);
-                    drawMandelbrotSet(&points, width, height, mdb_set);
-                    break;
-                default:
-                    // Just disabling warnings
-                    break;
-            }
-        }
+void destrPixelArray(PixelArray *array) {
+    delete (array);
+}
 
-        window.clear();
-        window.draw(points.pixels);
-        window.display();
+struct GraphWindow {
+    sf::RenderWindow window;
+
+    GraphWindow(size_t width, size_t height) : 
+        window(sf::VideoMode(width, height), "Mandelbrot") {
+        window.setFramerateLimit(60);
     }
+};
+
+GraphWindow *initWindow(size_t width, size_t height) {
+    GraphWindow *gw = new GraphWindow(width, height);
+    return gw;
+}
+
+void destrWindow(GraphWindow *window) {
+    delete(window);
+}
+
+int isOpen(const GraphWindow *window) {
+    return window->window.isOpen();
+}
+
+void handleWindowEvents(GraphWindow *wrap_window) {
+    sf::Event event;
+    sf::Window &window = wrap_window->window;
+    while (window.pollEvent(event)) {
+        if (event.type == sf::Event::Closed) {
+            window.close();
+        }
+    }
+}
+
+void draw(GraphWindow *wrap_window, PixelArray *pixels) {
+    wrap_window->window.clear();
+    wrap_window->window.draw(pixels->pixels);
+}
+
+void display(GraphWindow *window) {
+    window->window.display();
 }
 
 void setPixel(PixelArray *points, size_t px, size_t py, size_t color_code) {
