@@ -20,7 +20,7 @@ include_directories(${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 
-add_executable(irg main.cpp)
+add_executable(irg main.cpp ir.cpp)
 
 # Setup graphics lib
 include_directories(demo)

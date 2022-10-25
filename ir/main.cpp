@@ -1,6 +1,4 @@
 #include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/Module.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
 #include <llvm/Support/TargetSelect.h>
@@ -8,8 +6,9 @@
 #include <iostream>
 #include <string>
 #include <memory>
+#include <unordered_map>
 
-#include "mdbset_demo.h"
+#include "ir.h"
 
 void dumpModuleIR(const llvm::Module &module, std::ostream &outs) {
     outs << "## [LLVM IR] ##\n";
@@ -28,19 +27,7 @@ int main() {
     llvm::Module *module = new llvm::Module("Mandelbrot", context);
     llvm::IRBuilder<> builder(context);
 
-    llvm::FunctionType *voidFuncType = 
-        llvm::FunctionType::get(builder.getVoidTy(), false);
-    llvm::Function *mainFunc = 
-        llvm::Function::Create(voidFuncType, llvm::Function::ExternalLinkage, "main", module);
-    llvm::BasicBlock *bb = llvm::BasicBlock::Create(context, "_start", mainFunc);
-
-    builder.SetInsertPoint(bb);
-
-    llvm::Function *demoStartFunc = 
-        llvm::Function::Create(voidFuncType, llvm::Function::ExternalLinkage, "startMdbsetDemo", module);
-
-    builder.CreateCall(demoStartFunc);
-    builder.CreateRetVoid();
+    llvm::Function *mainFunc = buildIR(module, builder);
 
     dumpModuleIR(*module, std::cout);
 
@@ -49,9 +36,23 @@ int main() {
     llvm::ExecutionEngine *ee = 
         llvm::EngineBuilder(std::unique_ptr<llvm::Module>(module)).create();
 
+    std::unordered_map<std::string, void*> func_map;
+    #define MAPF(fname) \
+        func_map[#fname] = reinterpret_cast<void*>(fname)
+    MAPF(initPixelArray);
+    MAPF(initWindow);
+    MAPF(isOpen);
+    MAPF(handleWindowEvents);
+    MAPF(zoom);
+    MAPF(drawMandelbrotSet);
+    MAPF(draw);
+    MAPF(display);
+    MAPF(destrPixelArray);
+    MAPF(destrWindow);
+    #undef MAPF
     ee->InstallLazyFunctionCreator(
-        [](const std::string &fnName) -> void* {
-            return reinterpret_cast<void*>(startMdbsetDemo);
+        [&func_map](const std::string &fnName) -> void* {
+            return func_map[fnName];
         }
     );
 

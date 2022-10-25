@@ -1,20 +1,20 @@
 #include "mdbset_demo.h"
-
+#include <iostream>
 const size_t ITER_MAX = 100;
-static const coord_t PRECISION = 1000000;
+const coord_t PRECISION = 1000000;
 
 // Make int from floating point number
-coord_t inline getcoord(double x) {
+constexpr coord_t getcoord(double x) {
     return x * PRECISION;
 }
 
 // Fixed precision multiply
-coord_t inline mul(coord_t l, coord_t r) {
+constexpr coord_t mul(coord_t l, coord_t r) {
     return l * r / PRECISION;
 }
 
 // Fixed precision divide
-coord_t inline div(coord_t l, coord_t r) {
+constexpr coord_t div(coord_t l, coord_t r) {
     return l / r * PRECISION;
 }
 
@@ -56,7 +56,7 @@ void drawMandelbrotSet(PixelArray *points, size_t width, size_t height, Mandelbr
 }
 
 void zoom(MandelbrotSet *mdb_set) {
-    mdb_set->scale = mul(mdb_set->scale, getcoord(0.8));;
+    mdb_set->scale = mul(mdb_set->scale, getcoord(0.8));
 }
 
 void startMdbsetDemo() {
