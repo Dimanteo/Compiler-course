@@ -64,10 +64,10 @@ void setPixel(PixelArray *points, size_t px, size_t py, size_t color_code);
 //*** Helpers for fixed precision arithmetic ***//
 
 // Make int from floating point number
-coord_t inline getcoord(double x);
+constexpr coord_t getcoord(double x);
 
 // Fixed precision multiply
-coord_t inline mul(coord_t l, coord_t r);
+constexpr coord_t mul(coord_t l, coord_t r);
 
 // Fixed precision divide
-coord_t inline div(coord_t l, coord_t r);
+constexpr coord_t div(coord_t l, coord_t r);

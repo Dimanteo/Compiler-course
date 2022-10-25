@@ -4,17 +4,17 @@ const size_t ITER_MAX = 100;
 static const coord_t PRECISION = 1000000;
 
 // Make int from floating point number
-coord_t inline getcoord(double x) {
+constexpr coord_t getcoord(double x) {
     return x * PRECISION;
 }
 
 // Fixed precision multiply
-coord_t inline mul(coord_t l, coord_t r) {
+constexpr coord_t mul(coord_t l, coord_t r) {
     return l * r / PRECISION;
 }
 
 // Fixed precision divide
-coord_t inline div(coord_t l, coord_t r) {
+constexpr coord_t div(coord_t l, coord_t r) {
     return l / r * PRECISION;
 }
 
