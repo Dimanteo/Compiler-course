@@ -30,9 +30,16 @@ Language : Program { YYACCEPT; }
 Program : ENDLN | Expression ENDLN | Program Expression ENDLN
 
 Expression : VarAssignment | FunctionCall 
-    | RET { 
+    | Statement
+;
+
+Statement : RET { 
         IRGenerator &irg = CompilerCore::getCCore().getIRG();
         irg.genRet();
+    }
+    | RET ArithmeticExpr {
+        IRGenerator &irg = CompilerCore::getCCore().getIRG();
+        irg.genRet($2);
     }
 ;
 
@@ -43,12 +50,12 @@ VarAssignment : ID ASSIGN ArithmeticExpr {
 ;
 
 ArithmeticExpr : FactorExpr
-    | FactorExpr ADD FactorExpr { 
+    | ArithmeticExpr ADD FactorExpr { 
         // $$ $1 + $3;
         IRGenerator &irg = CompilerCore::getCCore().getIRG();
         $$ = irg.genAdd($1, $3); 
     }
-    | FactorExpr SUB FactorExpr { 
+    | ArithmeticExpr SUB FactorExpr { 
         // $$ = $1 - $3;
         IRGenerator &irg = CompilerCore::getCCore().getIRG();
         $$ = irg.genSub($1, $3);
@@ -56,12 +63,12 @@ ArithmeticExpr : FactorExpr
 ;
 
 FactorExpr : BracketsExpr
-    | BracketsExpr MUL BracketsExpr { 
+    | FactorExpr MUL BracketsExpr { 
         // $$ = $1 * $3; 
         IRGenerator &irg = CompilerCore::getCCore().getIRG();
         $$ = irg.genMul($1, $3);
     }
-    | BracketsExpr DIV BracketsExpr { 
+    | FactorExpr DIV BracketsExpr { 
         // $$ = $1 / $3;
         IRGenerator &irg = CompilerCore::getCCore().getIRG();
         $$ = irg.genDiv($1, $3);
