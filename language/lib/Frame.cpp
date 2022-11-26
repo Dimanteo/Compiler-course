@@ -11,9 +11,7 @@ ASTNode Frame::lookup(id_t id) const {
     return (*node_it).second;
 }
 
-void Frame::addVariable(id_t id, ASTNode value) {
-    locals_map[id] = value;
-}
+void Frame::addVariable(id_t id, ASTNode value) { locals_map[id] = value; }
 
 ASTNode Frame::allocVariable(id_t id) {
     CompilerCore &cc = CompilerCore::getCCore();

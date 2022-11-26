@@ -1,16 +1,16 @@
 %{
-// THIS CODE IS AUTO-GENERATED
-// If you want to modify it refer to codegen/ files
-
 #include "CompilerCore.h"
 #include <iostream>
 
 #define YYSTYPE kolang::ASTNode
+
 using namespace kolang;
 
 extern "C" void yyerror(const char *s);
 extern "C" int yylex();
 extern FILE *yyin;
+extern int yylineno;
+
 %}
 
 %token NUMBER
@@ -101,15 +101,16 @@ FunctionCall : PRINT BRA ID KET {
 
 %%
 
-void parser_main(int argc, char **argv) {
+bool parser_main(int argc, char **argv) {
     if (argc > 1) {
         yyin = fopen(argv[1], "r");
     } else {
         yyin = stdin;
     }
-    yyparse();
+    return yyparse();
 }
 
 void yyerror(const char *s) {
-    std::cerr << "Parser error:" << s << "\n";
+    CompilerCore &cc = CompilerCore::getCCore();
+    std::cerr << "Parser error: " << s << " in line " << yylineno << "\n";
 }

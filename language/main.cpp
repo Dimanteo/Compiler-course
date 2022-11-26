@@ -1,14 +1,17 @@
+#include "parser.hpp"
 #include "CompilerCore.h"
-#include "codegen/parser.hpp"
 
 #include <iostream>
 
-void parser_main(int argc, char **argv);
+bool parser_main(int argc, char **argv);
 
 int main(int argc, char **argv) {
-    parser_main(argc, argv);
-    kolang::IRGenerator &irg = kolang::CompilerCore::getCCore().getIRG();
-    irg.dump(std::cout);
-    irg.executeAndFreeModule();
+    if (parser_main(argc, argv)) {
+        std::cerr << "Compilation failed. Exiting.\n";
+        return EXIT_FAILURE;
+    }
+    kolang::CompilerCore &cc = kolang::CompilerCore::getCCore();
+    cc.getIRG().dump(std::cout);
+    cc.getIRG().executeAndFreeModule();
     return 0;
 }

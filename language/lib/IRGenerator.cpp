@@ -69,7 +69,9 @@ ASTNode IRGenerator::genDiv(ASTNode lhs, ASTNode rhs) {
 
 ASTNode IRGenerator::genNumber(int val) { return builder->getInt64(val); }
 
-ASTNode IRGenerator::genRet(ASTNode val) { return builder->CreateRet(LLV(val)); }
+ASTNode IRGenerator::genRet(ASTNode val) {
+    return builder->CreateRet(LLV(val));
+}
 
 ASTNode IRGenerator::genRet() { return builder->CreateRetVoid(); }
 

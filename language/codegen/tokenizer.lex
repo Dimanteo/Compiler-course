@@ -1,12 +1,10 @@
 %{
-// THIS CODE IS AUTO-GENERATED
-// If you want to modify it refer to codegen/ files
-
 #include "CompilerCore.h"
 
 #include <iostream>
 
 #define YYSTYPE kolang::ASTNode
+
 #include "parser.hpp"
 
 using namespace kolang;
