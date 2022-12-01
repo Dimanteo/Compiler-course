@@ -32,6 +32,14 @@ bool Frame::assignVariable(id_t id, ASTNode value) {
     return true;
 }
 
+/****** Global Frame ******/
+llvm::BasicBlock *GlobalFrame::getCurrentBB() {
+    IRGenerator &IRG = CompilerCore::getCCore().getIRG();
+    llvm::Function *func =
+        IRG.getModule().getFunction(IRGenerator::getStartFuncName());
+    return &func->getEntryBlock();
+}
+
 ASTNode GlobalFrame::allocVariable(id_t id) {
     CompilerCore &cc = CompilerCore::getCCore();
     IRGenerator &IRG = cc.getIRG();
@@ -39,6 +47,13 @@ ASTNode GlobalFrame::allocVariable(id_t id) {
     ASTNode memLoc = IRG.genGlobalAlloc(name);
     addVariable(id, memLoc);
     return memLoc;
+}
+
+/****** Function Frame ******/
+
+FunctionFrame::FunctionFrame(llvm::Function *func) : function(func) {
+    assert(func && "Invalid function passed as argument");
+    blocks.push_back(&func->getEntryBlock());
 }
 
 }; // namespace kolang

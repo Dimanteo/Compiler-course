@@ -19,19 +19,47 @@ extern int yylineno;
 %token ID
 %token LE GT EQ NEQ LEQ GEQ
 %token ASSIGN
-%token BRA KET
+%token BRA KET FIGBRA FIGKET
 %token PRINT
 %token RET
 
 %%
 
-Language : Program { YYACCEPT; }
+Language : Program { 
+        IRGenerator &irg = CompilerCore::getCCore().getIRG();
+        if (irg.finalizeStartFunction()) {
+            YYACCEPT; 
+        } else {
+            YYERROR;
+        }
+    }
 
-Program : ENDLN | Expression ENDLN | Program Expression ENDLN
+Program : GlobalDef | Program GlobalDef;
 
-Expression : VarAssignment | FunctionCall 
-    | Statement
+GlobalDef : FunctionDef | VarAssignment ENDLN;
+
+FunctionDef : ID FIGBRA  {
+        CompilerCore &cc = CompilerCore::getCCore();
+        cc.defineFunction($1);
+    } Body FIGKET {
+        CompilerCore &cc = CompilerCore::getCCore();
+        cc.leaveFunction();
+    }
+    | Scope // Kind of namespaces
 ;
+
+Scope : FIGBRA {
+        CompilerCore &cc = CompilerCore::getCCore();
+        cc.enterScope();
+    } Body FIGKET {
+        CompilerCore &cc = CompilerCore::getCCore();
+        cc.leaveScope();
+    }
+;
+
+Body : ENDLN | Expression ENDLN | Body Expression ENDLN;
+
+Expression : VarAssignment | FunctionCall | Statement | Scope;
 
 Statement : RET { 
         IRGenerator &irg = CompilerCore::getCCore().getIRG();
@@ -83,7 +111,8 @@ Literal : ID {
         CompilerCore &cc = CompilerCore::getCCore();
         ASTNode var = cc.handleVarUse($1);
         if (var == IRGenerator::NIL_NODE) {
-            std::cerr << "Syntax ERROR: Undefined variable.\n";
+            std::cerr << "Syntax ERROR: Undefined variable at line "
+                      << yylineno << ".\n";
             YYERROR;
         }
         $$ = var;
@@ -111,6 +140,5 @@ bool parser_main(int argc, char **argv) {
 }
 
 void yyerror(const char *s) {
-    CompilerCore &cc = CompilerCore::getCCore();
     std::cerr << "Parser error: " << s << " in line " << yylineno << "\n";
 }

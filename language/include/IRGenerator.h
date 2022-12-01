@@ -9,6 +9,8 @@
 
 namespace kolang {
 
+class Frame;
+
 using id_t = uint64_t;
 using ASTNode = std::variant<llvm::Value *, id_t>;
 
@@ -32,9 +34,11 @@ class IRGenerator {
     void executeAndFreeModule();
     void dump(std::ostream &outs);
     llvm::Module &getModule() const { return *module.get(); }
-    // Program entry point
-    static std::string getEntryFuncName() { return "main"; }
-
+    // User program entry point
+    static constexpr const char * getEntryFuncName() { return "main"; }
+    // STD lib entry point
+    static constexpr const char * getStartFuncName() { return "__kolang_start"; }
+    void insertIn(Frame *frame);
     ASTNode genAdd(ASTNode lhs, ASTNode rhs);
     ASTNode genSub(ASTNode lhs, ASTNode rhs);
     ASTNode genMul(ASTNode lhs, ASTNode rhs);
@@ -46,6 +50,9 @@ class IRGenerator {
     void genStore(ASTNode ptr, ASTNode value);
     ASTNode genRet(ASTNode val);
     ASTNode genRet();
+    // Create function and setInsertPoint to it
+    void genFunction(const std::string &name);
+    bool finalizeStartFunction();
 };
 
 }; // namespace kolang

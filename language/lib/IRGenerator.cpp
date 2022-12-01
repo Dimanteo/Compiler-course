@@ -1,4 +1,5 @@
 #include "IRGenerator.h"
+#include "Frame.h"
 
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
@@ -22,16 +23,11 @@ IRGenerator::IRGenerator() {
     context = std::make_unique<LLVMContext>();
     module = std::make_unique<Module>(genModuleID(), *context);
     builder = std::make_unique<IRBuilder<>>(*context);
-    FunctionType *voidFuncType = FunctionType::get(builder->getVoidTy(), false);
-    Function *mainFunc =
-        Function::Create(voidFuncType, Function::ExternalLinkage,
-                         getEntryFuncName(), module.get());
-    BasicBlock *bb = llvm::BasicBlock::Create(*context, "BB0", mainFunc);
-    builder->SetInsertPoint(bb);
+    genFunction(getStartFuncName());
 }
 
 void IRGenerator::executeAndFreeModule() {
-    Function *mainFunc = module->getFunction(getEntryFuncName());
+    Function *mainFunc = module->getFunction(getStartFuncName());
     Module *tmp_ptr = module.release();
     module = std::make_unique<Module>(genModuleID(), *context);
     ExecutionEngine *ee =
@@ -80,7 +76,8 @@ ASTNode IRGenerator::genLocalAlloc() {
 }
 
 ASTNode IRGenerator::genGlobalAlloc(std::string &name) {
-    return module->getOrInsertGlobal(name, builder->getInt64Ty());
+    module->getOrInsertGlobal(name, builder->getInt64Ty());
+    return module->getNamedGlobal(name);
 }
 
 ASTNode IRGenerator::genLoad(ASTNode ptr) {
@@ -90,5 +87,33 @@ ASTNode IRGenerator::genLoad(ASTNode ptr) {
 void IRGenerator::genStore(ASTNode ptr, ASTNode value) {
     builder->CreateStore(LLV(value), LLV(ptr));
 }
+
+void IRGenerator::genFunction(const std::string &name) {
+    FunctionType *type = FunctionType::get(builder->getInt64Ty(), false);
+    Function *func =
+        Function::Create(type, Function::ExternalLinkage, name, *module);
+    BasicBlock *bb =
+        BasicBlock::Create(*context, FunctionFrame::getBBname(0), func);
+    assert(bb == &func->getEntryBlock());
+    builder->SetInsertPoint(bb);
+}
+
+void IRGenerator::insertIn(Frame *frame) {
+    builder->SetInsertPoint(frame->getCurrentBB());
+}
+
+bool IRGenerator::finalizeStartFunction() {
+    llvm::Function *mainF =
+        module->getFunction(IRGenerator::getEntryFuncName());
+    if (!mainF) {
+        std::cerr << "Compiler error. No \"main\" function.\n";
+        return false;
+    }
+    llvm::Value *retval = builder->CreateCall(mainF);
+    builder->CreateRet(retval);
+    return true;
+}
+
+#undef LLV
 
 }; // namespace kolang

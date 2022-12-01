@@ -16,8 +16,12 @@ namespace kolang {
 // Singletone with compiler facilities
 class CompilerCore {
     IRGenerator IRG;
-    // Array of function frames. 0 frame is global scope
-    std::vector<Frame> frames;
+    // Storage of program scopes
+    std::vector<ScopeFrame> scopes;
+    // Storage of function scopes
+    std::vector<FunctionFrame> functions;
+    // Global frame. Manager of global variables.
+    std::unique_ptr<GlobalFrame> global_frame;
     // Scope stack
     std::vector<Frame *> frame_stack;
     // Mapping of names encountered during parser to their unique id
@@ -43,6 +47,11 @@ class CompilerCore {
     IRGenerator &getIRG() { return IRG; }
     void handleAssignment(ASTNode id, ASTNode val);
     ASTNode handleVarUse(ASTNode id);
+    void defineFunction(ASTNode function);
+    void leaveFunction();
+    void enterScope();
+    void leaveScope();
+
     id_t registerName(const char *name);
     std::string getNameByID(id_t id) const;
 };

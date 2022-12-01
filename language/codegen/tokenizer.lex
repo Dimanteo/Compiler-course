@@ -23,6 +23,8 @@ extern "C" int yylex();
 [/]     { return DIV; }
 [(]     { return BRA; }
 [)]     { return KET; }
+[{]     { return FIGBRA; }
+[}]     { return FIGKET; }
 [=][=]    { return EQ; }
 [<][=]    { return LEQ; }
 [>][=]    { return GEQ; }

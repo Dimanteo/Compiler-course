@@ -2,9 +2,9 @@
 
 namespace kolang {
 
-CompilerCore::CompilerCore() {
-    frames.push_back(GlobalFrame());
-    frame_stack.push_back(&frames.back());
+CompilerCore::CompilerCore() { 
+    global_frame.reset(new GlobalFrame());
+    frame_stack.push_back(global_frame.get()); 
 }
 
 void CompilerCore::handleAssignment(ASTNode id_node, ASTNode val) {
@@ -23,14 +23,14 @@ void CompilerCore::handleAssignment(ASTNode id_node, ASTNode val) {
 
 ASTNode CompilerCore::handleVarUse(ASTNode id_node) {
     id_t id = std::get<id_t>(id_node);
-    ASTNode memLoc = getCurrentFrame().lookup(id);
-    if (memLoc == IRGenerator::NIL_NODE) {
-        memLoc = getGLobalFrame().lookup(id);
+    for (auto frame_it = frame_stack.rbegin(); frame_it != frame_stack.rend();
+         ++frame_it) {
+        ASTNode memLoc = (*frame_it)->lookup(id);
+        if (memLoc != IRGenerator::NIL_NODE) {
+            return IRG.genLoad(memLoc);
+        }
     }
-    if (memLoc == IRGenerator::NIL_NODE) {
-        return IRGenerator::NIL_NODE;
-    }
-    return IRG.genLoad(memLoc);
+    return IRGenerator::NIL_NODE;
 }
 
 id_t CompilerCore::registerName(const char *name) {
@@ -54,6 +54,28 @@ std::string CompilerCore::getNameByID(id_t id) const {
 
 Frame &CompilerCore::getCurrentFrame() const { return *frame_stack.back(); }
 
-Frame &CompilerCore::getGLobalFrame() const { return *frame_stack[0]; }
+Frame &CompilerCore::getGLobalFrame() const { return *global_frame; }
+
+void CompilerCore::defineFunction(ASTNode name_node) {
+    id_t id = std::get<id_t>(name_node);
+    const std::string &name = getNameByID(id);
+    IRG.genFunction(name);
+    functions.emplace_back(IRG.getModule().getFunction(name));
+    frame_stack.push_back(&functions.back());
+}
+
+void CompilerCore::leaveFunction() { 
+    leaveScope();
+}
+
+void CompilerCore::enterScope() {
+    scopes.emplace_back(frame_stack.back()->getCurrentBB());
+    frame_stack.push_back(&scopes.back());
+}
+
+void CompilerCore::leaveScope() { 
+    frame_stack.pop_back();
+    IRG.insertIn(frame_stack.back());
+}
 
 }; // namespace kolang
