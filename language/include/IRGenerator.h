@@ -1,6 +1,8 @@
 #ifndef KOLANG_IR_GENERATOR_H
 #define KOLANG_IR_GENERATOR_H
 
+#include "ASTNode.h"
+
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -10,9 +12,6 @@
 namespace kolang {
 
 class Frame;
-
-using id_t = uint64_t;
-using ASTNode = std::variant<llvm::Value *, id_t>;
 
 class IRGenerator {
     std::unique_ptr<llvm::LLVMContext> context;
@@ -29,15 +28,13 @@ class IRGenerator {
 
   public:
     IRGenerator();
-    static constexpr ASTNode NIL_NODE = 0UL;
-
     void executeAndFreeModule();
     void dump(std::ostream &outs);
     llvm::Module &getModule() const { return *module.get(); }
     // User program entry point
-    static constexpr const char * getEntryFuncName() { return "main"; }
+    static constexpr const char *getEntryFuncName() { return "main"; }
     // STD lib entry point
-    static constexpr const char * getStartFuncName() { return "__kolang_start"; }
+    static constexpr const char *getStartFuncName() { return "__kolang_start"; }
     void insertIn(Frame *frame);
     ASTNode genAdd(ASTNode lhs, ASTNode rhs);
     ASTNode genSub(ASTNode lhs, ASTNode rhs);
@@ -51,8 +48,9 @@ class IRGenerator {
     ASTNode genRet(ASTNode val);
     ASTNode genRet();
     // Create function and setInsertPoint to it
-    void genFunction(const std::string &name);
+    void genFunction(const std::string &name, ASTNode args);
     bool finalizeStartFunction();
+    ASTNode genCall(std::string &name, ASTNode args);
 };
 
 }; // namespace kolang

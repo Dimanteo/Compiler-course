@@ -25,7 +25,7 @@ class CompilerCore {
     // Scope stack
     std::vector<Frame *> frame_stack;
     // Mapping of names encountered during parser to their unique id
-    std::unordered_map<std::string, id_t> names_pool;
+    std::unordered_map<std::string, strid_t> names_pool;
 
     CompilerCore();
     CompilerCore(const CompilerCore &) = delete;
@@ -39,21 +39,21 @@ class CompilerCore {
         static CompilerCore CC;
         return CC;
     }
-    id_t getNewID() {
-        static id_t id = 0;
+    strid_t getNewID() {
+        static strid_t id = 0;
         return ++id;
     }
     // Get IRGenerator
     IRGenerator &getIRG() { return IRG; }
     void handleAssignment(ASTNode id, ASTNode val);
     ASTNode handleVarUse(ASTNode id);
-    void defineFunction(ASTNode function);
+    void defineFunction(ASTNode function, ASTNode args);
     void leaveFunction();
     void enterScope();
     void leaveScope();
 
-    id_t registerName(const char *name);
-    std::string getNameByID(id_t id) const;
+    strid_t registerName(const char *name);
+    std::string getNameByID(strid_t id) const;
 };
 
 }; // namespace kolang

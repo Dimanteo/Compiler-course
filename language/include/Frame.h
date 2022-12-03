@@ -26,7 +26,7 @@ class Frame {
 // Global scope
 class GlobalFrame : public Frame {
   public:
-    GlobalFrame()=default;
+    GlobalFrame() = default;
     virtual ASTNode allocVariable(id_t id) override;
     virtual llvm::BasicBlock *getCurrentBB() override;
     virtual ~GlobalFrame() = default;
@@ -46,6 +46,7 @@ class FunctionFrame : public Frame {
     // This is now a boilerplate, but it will be useful for definig lambdas and
     // embedded functions
     virtual llvm::BasicBlock *getCurrentBB() override { return blocks.back(); }
+    void allocArgs(ASTNode &args);
     virtual ~FunctionFrame() = default;
 };
 

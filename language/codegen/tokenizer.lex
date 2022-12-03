@@ -38,14 +38,14 @@ extern "C" int yylex();
     yylval = irg.genNumber(val);
     return NUMBER; 
 }
-[p][r][i][n][t] { return PRINT; }
 [r][e][t][u][r][n] { return RET; }
 [A-Za-z_]+[0-9A-Za-z_]* {
     CompilerCore &cc = CompilerCore::getCCore();
-    kolang::id_t id = cc.registerName(yytext);
+    kolang::strid_t id = cc.registerName(yytext);
     yylval = id;
     return ID;
-} 
+}
+[,] { return COMA; }
 [ \n\t\r] ; // whitespace
 . { return *yytext; }
 %%

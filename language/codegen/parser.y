@@ -20,7 +20,7 @@ extern int yylineno;
 %token LE GT EQ NEQ LEQ GEQ
 %token ASSIGN
 %token BRA KET FIGBRA FIGKET
-%token PRINT
+%token COMA
 %token RET
 
 %%
@@ -38,14 +38,28 @@ Program : GlobalDef | Program GlobalDef;
 
 GlobalDef : FunctionDef | VarAssignment ENDLN;
 
-FunctionDef : ID FIGBRA  {
+FunctionDef : ID ArgsDef FIGBRA  {
         CompilerCore &cc = CompilerCore::getCCore();
-        cc.defineFunction($1);
+        cc.defineFunction($1, $2);
     } Body FIGKET {
         CompilerCore &cc = CompilerCore::getCCore();
         cc.leaveFunction();
     }
-    | Scope // Kind of namespaces
+;
+
+ArgsDef : BRA NameList KET {
+        $$ = $2;
+    }
+    | BRA KET {
+        $$ = ASTNode::getNIL();
+    }
+
+NameList : NameList COMA ID {
+        ASTNode &argv = $1;
+        argv.addValue($3);
+        $$ = argv;
+    }
+    | ID
 ;
 
 Scope : FIGBRA {
@@ -110,21 +124,36 @@ BracketsExpr : BRA ArithmeticExpr KET { $$ = $2; }
 Literal : ID {
         CompilerCore &cc = CompilerCore::getCCore();
         ASTNode var = cc.handleVarUse($1);
-        if (var == IRGenerator::NIL_NODE) {
+        if (var.isNIL()) {
             std::cerr << "Syntax ERROR: Undefined variable at line "
                       << yylineno << ".\n";
             YYERROR;
         }
         $$ = var;
     }
+    | FunctionCall
     | NUMBER
 ;
 
-FunctionCall : PRINT BRA ID KET {
-        std::cout << "ID\n";
+FunctionCall : ID ArgsPassing {
+    CompilerCore &cc = CompilerCore::getCCore();
+    ASTNode name_node = $1;
+    std::string name = cc.getNameByID(ASTNode::asID(name_node.get()));
+    $$ = cc.getIRG().genCall(name, $2);
+}
+;
+
+ArgsPassing : BRA ExprList KET {
+        $$ = $2;
     }
-    | PRINT BRA NUMBER KET {
-        std::cout << "Number\n";
+    | BRA KET { $$ = ASTNode::getNIL(); }
+;
+
+ExprList : ArithmeticExpr
+    | ExprList COMA ArithmeticExpr {
+        ASTNode &argv = $1;
+        argv.addValue($3);
+        $$ = argv;
     }
 ;
 
