@@ -155,4 +155,10 @@ IRValue GEQNode::emit() {
     return IRG.genGEQ(left->emit(), right->emit());
 }
 
+IRValue WhileNode::emit() {
+    IRGenerator &IRG = CompilerCore::getCCore().getIRG();
+    IRG.genWhile(condition, body);
+    return IRGenerator::NIL();
+}
+
 } // namespace kolang

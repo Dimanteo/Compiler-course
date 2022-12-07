@@ -23,7 +23,7 @@ extern int yylineno;
 %token BRA KET FIGBRA FIGKET
 %token COMA
 %token RET
-%token IF
+%token IF WHILE
 
 %%
 
@@ -89,7 +89,7 @@ Body : Expression Body {
 
 Expression : VarAssignment ENDLN | FunctionCall ENDLN | Statement;
 
-Statement : RetStatement ENDLN | IfStatement;
+Statement : RetStatement ENDLN | IfStatement | LoopStatement;
 
 RetStatement : RET { 
         CompilerCore &cc = CompilerCore::getCCore();
@@ -107,6 +107,11 @@ IfStatement : IF BRA LogicExpression KET FIGBRA Body FIGKET {
     }
 ;
 
+LoopStatement : WHILE BRA LogicExpression KET FIGBRA Body FIGKET {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<WhileNode>($3, $6);
+    }
+;
 LogicExpression : ArithmeticExpr EQ ArithmeticExpr {
         CompilerCore &cc = CompilerCore::getCCore();
         $$ = cc.make<EQNode>($1, $3);

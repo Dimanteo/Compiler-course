@@ -234,6 +234,18 @@ class IfNode : public ASTNode {
     virtual ~IfNode() = default;
 };
 
+class WhileNode : public ASTNode {
+    ASTNode *condition;
+    ExprNode *body;
+
+  public:
+    WhileNode(ASTNode *cond, ASTNode *code)
+        : WhileNode(cond, dynamic_cast<ExprNode *>(code)) {}
+    WhileNode(ASTNode *cond, ExprNode *code) : condition(cond), body(code) {}
+    IRValue emit() override;
+    virtual ~WhileNode() = default;
+};
+
 } // namespace kolang
 
 #endif

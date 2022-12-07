@@ -194,4 +194,20 @@ void IRGenerator::genIf(IRValue condition, ASTNode *true_path) {
     builder->SetInsertPoint(outro);
 }
 
+void IRGenerator::genWhile(ASTNode *condition, ASTNode *body) {
+    CompilerCore &cc = CompilerCore::getCCore();
+    BasicBlock *intro = builder->GetInsertBlock();
+    Function *curr_func = intro->getParent();
+    BasicBlock *loop_bb = BasicBlock::Create(*context, getBBName(), curr_func);
+    BasicBlock *outro = BasicBlock::Create(*context, getBBName(), curr_func);
+    builder->CreateBr(loop_bb);
+    cc.enterScope();
+    builder->SetInsertPoint(loop_bb);
+    IRValue cond_val = condition->emit();
+    body->emit();
+    builder->CreateCondBr(cond_val, loop_bb, outro);
+    cc.leaveScope();
+    builder->SetInsertPoint(outro);
+}
+
 }; // namespace kolang

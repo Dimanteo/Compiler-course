@@ -40,6 +40,7 @@ extern "C" int yylex();
 }
 [r][e][t][u][r][n] { return RET; }
 [i][f] {return IF; }
+[w][h][i][l][e] { return WHILE; }
 [A-Za-z_]+[0-9A-Za-z_]* {
     CompilerCore &cc = CompilerCore::getCCore();
     yylval  = cc.makeID(yytext);

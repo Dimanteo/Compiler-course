@@ -46,8 +46,9 @@ class IRGenerator {
     void emitAST(ASTNode *entry);
     llvm::BasicBlock *getInsertBlock() { return builder->GetInsertBlock(); }
     void setInsertBlock(llvm::BasicBlock *bb) { builder->SetInsertPoint(bb); }
+    
+    void genWhile(ASTNode *condition, ASTNode *body);
     void genIf(IRValue condition, ASTNode *true_path);
-
     IRValue genAdd(IRValue lhs, IRValue rhs);
     IRValue genSub(IRValue lhs, IRValue rhs);
     IRValue genMul(IRValue lhs, IRValue rhs);
