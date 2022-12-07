@@ -1,83 +1,85 @@
 #include "CompilerCore.h"
+#include "AST.h"
 
 namespace kolang {
 
-CompilerCore::CompilerCore() {
-    global_frame.reset(new GlobalFrame());
-    frame_stack.push_back(global_frame.get());
+CompilerCore::~CompilerCore() {
+    for (ASTNode *node : node_storage) {
+        delete (node);
+    }
 }
 
-void CompilerCore::handleAssignment(ASTNode id_node, ASTNode val) {
-    strid_t id = ASTNode::asID(id_node.get());
-    for (auto frame_it = frame_stack.rbegin(); frame_it != frame_stack.rend();
-         ++frame_it) {
-        if ((*frame_it)->assignVariable(id, val)) {
-            return;
+strid_t CompilerCore::getOrCreateID(const char *text) {
+    for (strid_t id = 0; id < names_pool.size(); ++id) {
+        if (std::strcmp(names_pool[id].c_str(), text) == 0) {
+            return id;
         }
     }
-    // If we are here, than variable wasn't found in any scope
-    // Create variable definition
-    getCurrentFrame().allocVariable(id);
-    getCurrentFrame().assignVariable(id, val);
+    names_pool.emplace_back(text);
+    return names_pool.size() - 1;
 }
 
-ASTNode CompilerCore::handleVarUse(ASTNode id_node) {
-    strid_t id = ASTNode::asID(id_node.get());
-    for (auto frame_it = frame_stack.rbegin(); frame_it != frame_stack.rend();
-         ++frame_it) {
-        ASTNode memLoc = (*frame_it)->lookup(id);
-        if (!memLoc.isNIL()) {
-            return IRG.genLoad(memLoc);
-        }
-    }
-    return ASTNode::getNIL();
+void CompilerCore::generateIR() {
+    // Global scope
+    IRG.genStartPrologue();
+    IRG.emitAST(getRootNode());
+    IRG.genStartEpilogue();
 }
 
-strid_t CompilerCore::registerName(const char *name) {
-    auto id_it = names_pool.find(name);
-    if (id_it != names_pool.end()) {
-        return id_it->second;
-    }
-    strid_t id = getNewID();
-    names_pool[name] = id;
-    return id;
-}
+ASTNode *CompilerCore::getRootNode() { return ast_root; }
 
-std::string CompilerCore::getNameByID(strid_t id) const {
-    for (auto name_it : names_pool) {
-        if (name_it.second == id) {
-            return name_it.first;
-        }
-    }
-    return "";
-}
+void CompilerCore::setRootNode(ASTNode *node) { ast_root = node; }
 
-Frame &CompilerCore::getCurrentFrame() const { return *frame_stack.back(); }
-
-Frame &CompilerCore::getGLobalFrame() const { return *global_frame; }
-
-void CompilerCore::defineFunction(ASTNode name_node, ASTNode args_node) {
-    strid_t id = ASTNode::asID(name_node.get());
-    const std::string &name = getNameByID(id);
-    IRG.genFunction(name, args_node);
-    FunctionFrame &fframe =
-        functions.emplace_back(IRG.getModule().getFunction(name));
-    frame_stack.push_back(&fframe);
-    if (!args_node.isNIL()) {
-        fframe.allocArgs(args_node);
-    }
-}
-
-void CompilerCore::leaveFunction() { leaveScope(); }
+std::string &CompilerCore::getStringByID(strid_t id) { return names_pool[id]; }
 
 void CompilerCore::enterScope() {
-    scopes.emplace_back(frame_stack.back()->getCurrentBB());
-    frame_stack.push_back(&scopes.back());
+    if (!scope_stack.empty()) {
+        scope_stack.back().yieldInsertBlock();
+    }
+    scope_stack.emplace_back();
 }
 
-void CompilerCore::leaveScope() {
-    frame_stack.pop_back();
-    IRG.insertIn(frame_stack.back());
+void CompilerCore::leaveScope() { 
+    scope_stack.pop_back();
+    if (!scope_stack.empty()) {
+        scope_stack.back().applyInsertBlock();
+    }
+}
+
+IRValue CompilerCore::lookup(strid_t id) {
+    for (auto scope_it = scope_stack.rbegin(); scope_it != scope_stack.rend();
+         ++scope_it) {
+        if (scope_it->contains(id)) {
+            return scope_it->getVariableValue(id);
+        }
+    }
+    return IRGenerator::NIL();
+}
+
+bool CompilerCore::inGlobalScope() { return scope_stack.size() == 1; }
+
+void CompilerCore::populateAvailableVariables(
+    const std::vector<strid_t> &id_list) {
+    for (strid_t id : id_list) {
+        populateAvailableVariables(id);
+    }
+}
+
+void CompilerCore::populateAvailableVariables(strid_t id) {
+    Scope &curr_scope = scope_stack.back();
+    curr_scope.setOrUpdateVariable(id);
+}
+
+void CompilerCore::addIDValueMapping(strid_t id, IRValue value) {
+    Scope &curr_scope = scope_stack.back();
+    assert(curr_scope.contains(id) &&
+           "Mapping ID that is not available in this scope");
+    curr_scope.setOrUpdateVariable(id, value);
+}
+
+IDNode *CompilerCore::makeID(const char *text) {
+    strid_t id = getOrCreateID(text);
+    return allocateNode<IDNode>(id);
 }
 
 }; // namespace kolang

@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#define YYSTYPE kolang::ASTNode
+#define YYSTYPE kolang::ASTNode *
 
 #include "parser.hpp"
 
@@ -29,20 +29,19 @@ extern "C" int yylex();
 [<][=]    { return LEQ; }
 [>][=]    { return GEQ; }
 [!][=]    { return NEQ; }
-[<]     { return LE; }
+[<]     { return LT; }
 [>]     { return GT; }
 [=]     { return ASSIGN; }
 [0-9]+   { 
-    int val = atoi(yytext);
-    IRGenerator &irg = CompilerCore::getCCore().getIRG();
-    yylval = irg.genNumber(val);
+    int64_t val = atoi(yytext);
+    CompilerCore &cc = CompilerCore::getCCore();
+    yylval = cc.make<NumberNode>(val);
     return NUMBER; 
 }
 [r][e][t][u][r][n] { return RET; }
 [A-Za-z_]+[0-9A-Za-z_]* {
     CompilerCore &cc = CompilerCore::getCCore();
-    kolang::strid_t id = cc.registerName(yytext);
-    yylval = id;
+    yylval  = cc.makeID(yytext);
     return ID;
 }
 [,] { return COMA; }

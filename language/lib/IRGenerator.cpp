@@ -1,5 +1,6 @@
 #include "IRGenerator.h"
-#include "Frame.h"
+#include "AST.h"
+#include "CompilerCore.h"
 
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
@@ -14,20 +15,16 @@ using namespace llvm;
 
 namespace kolang {
 
-// Syntax sugar for extracting llvm::Value
-#define LLV(v) ASTNode::asPtr(v.get())
-
 IRGenerator::IRGenerator() {
     InitializeNativeTarget();
     InitializeNativeTargetAsmPrinter();
     context = std::make_unique<LLVMContext>();
     module = std::make_unique<Module>(genModuleID(), *context);
     builder = std::make_unique<IRBuilder<>>(*context);
-    genFunction(getStartFuncName(), ASTNode::getNIL());
 }
 
 void IRGenerator::executeAndFreeModule() {
-    Function *mainFunc = module->getFunction(getStartFuncName());
+    Function *mainFunc = module->getFunction(Start_func_name);
     Module *tmp_ptr = module.release();
     module = std::make_unique<Module>(genModuleID(), *context);
     ExecutionEngine *ee =
@@ -47,97 +44,115 @@ void IRGenerator::dump(std::ostream &outs) {
     outs << out_str;
 }
 
-ASTNode IRGenerator::genAdd(ASTNode lhs, ASTNode rhs) {
-    return builder->CreateAdd(LLV(lhs), LLV(rhs));
+void IRGenerator::genStartPrologue() {
+    CompilerCore &cc = CompilerCore::getCCore();
+    cc.enterScope();
+    assert(cc.inGlobalScope() && "Unexpected scope depth");
+    llvm::FunctionType *start_ty =
+        FunctionType::get(builder->getInt64Ty(), false);
+    llvm::Function *start_f = Function::Create(
+        start_ty, Function::ExternalLinkage, Start_func_name, *module);
+    BasicBlock *bb = BasicBlock::Create(*context, getBBName(), start_f);
+    builder->SetInsertPoint(bb);
 }
 
-ASTNode IRGenerator::genSub(ASTNode lhs, ASTNode rhs) {
-    return builder->CreateSub(LLV(lhs), LLV(rhs));
+void IRGenerator::genStartEpilogue() {
+    CompilerCore &cc = CompilerCore::getCCore();
+    llvm::Function *start_f = module->getFunction(Start_func_name);
+    assert(start_f && "Start function not found");
+    builder->SetInsertPoint(&start_f->getEntryBlock());
+    IRValue retval = genCall(Entry_func_name);
+    genReturn(retval);
+    assert(cc.inGlobalScope() && "Unexpected scope depth");
+    cc.leaveScope();
 }
 
-ASTNode IRGenerator::genMul(ASTNode lhs, ASTNode rhs) {
-    return builder->CreateMul(LLV(lhs), LLV(rhs));
+void IRGenerator::emitAST(ASTNode *entry) { entry->emit(); }
+
+IRValue IRGenerator::genAdd(IRValue lhs, IRValue rhs) {
+    return builder->CreateAdd(lhs, rhs);
 }
 
-ASTNode IRGenerator::genDiv(ASTNode lhs, ASTNode rhs) {
-    return builder->CreateUDiv(LLV(lhs), LLV(rhs));
+IRValue IRGenerator::genSub(IRValue lhs, IRValue rhs) {
+    return builder->CreateSub((lhs), (rhs));
 }
 
-ASTNode IRGenerator::genNumber(int val) { return builder->getInt64(val); }
-
-ASTNode IRGenerator::genRet(ASTNode val) {
-    return builder->CreateRet(LLV(val));
+IRValue IRGenerator::genMul(IRValue lhs, IRValue rhs) {
+    return builder->CreateMul(lhs, rhs);
 }
 
-ASTNode IRGenerator::genRet() { return builder->CreateRetVoid(); }
+IRValue IRGenerator::genDiv(IRValue lhs, IRValue rhs) {
+    return builder->CreateUDiv(lhs, rhs);
+}
 
-ASTNode IRGenerator::genLocalAlloc() {
+IRValue IRGenerator::genNumber(numb_t val) { return builder->getInt64(val); }
+
+void IRGenerator::genReturn(IRValue val) { builder->CreateRet(val); }
+
+void IRGenerator::genReturn() { genReturn(genNumber(0)); }
+
+IRValue IRGenerator::allocateLocal() {
     return builder->CreateAlloca(builder->getInt64Ty());
 }
 
-ASTNode IRGenerator::genGlobalAlloc(std::string &name) {
+IRValue IRGenerator::allocateGlobal(const std::string &name) {
     module->getOrInsertGlobal(name, builder->getInt64Ty());
     return module->getNamedGlobal(name);
 }
 
-ASTNode IRGenerator::genLoad(ASTNode ptr) {
-    return builder->CreateLoad(builder->getInt64Ty(), LLV(ptr));
+IRValue IRGenerator::genLoad(IRValue ptr) {
+    return builder->CreateLoad(builder->getInt64Ty(), ptr);
 }
 
-void IRGenerator::genStore(ASTNode ptr, ASTNode value) {
-    builder->CreateStore(LLV(value), LLV(ptr));
+void IRGenerator::genStore(IRValue ptr, IRValue value) {
+    builder->CreateStore(value, ptr);
 }
 
-void IRGenerator::genFunction(const std::string &name, ASTNode args) {
-    std::vector<llvm::Type *> params;
-    FunctionType *type = nullptr;
-    if (!args.isNIL()) {
-        for (size_t i = 0; i < args.getNumValues(); ++i) {
-            params.push_back(builder->getInt64Ty());
-        }
-        type = FunctionType::get(builder->getInt64Ty(), params, false);
-    } else {
-        type = FunctionType::get(builder->getInt64Ty(), false);
-    }
+void IRGenerator::declFunction(const std::string &name) {
+    FunctionType *f_type = FunctionType::get(builder->getInt64Ty(), false);
     Function *func =
-        Function::Create(type, Function::ExternalLinkage, name, *module);
-    BasicBlock *bb =
-        BasicBlock::Create(*context, FunctionFrame::getBBname(0), func);
-    assert(bb == &func->getEntryBlock());
+        Function::Create(f_type, Function::ExternalLinkage, name, *module);
+    BasicBlock *bb = BasicBlock::Create(*context, getBBName(), func);
     builder->SetInsertPoint(bb);
 }
 
-void IRGenerator::insertIn(Frame *frame) {
-    builder->SetInsertPoint(frame->getCurrentBB());
-}
-
-bool IRGenerator::finalizeStartFunction() {
-    llvm::Function *mainF =
-        module->getFunction(IRGenerator::getEntryFuncName());
-    if (!mainF) {
-        std::cerr << "Compiler error. No \"main\" function.\n";
-        return false;
+void IRGenerator::declFunction(const std::string &name,
+                               const std::vector<strid_t> &params) {
+    std::vector<Type *> par_types(params.size(), builder->getInt64Ty());
+    FunctionType *f_type =
+        FunctionType::get(builder->getInt64Ty(), par_types, false);
+    Function *func =
+        Function::Create(f_type, Function::ExternalLinkage, name, *module);
+    BasicBlock *bb = BasicBlock::Create(*context, getBBName(), func);
+    builder->SetInsertPoint(bb);
+    CompilerCore &cc = CompilerCore::getCCore();
+    cc.populateAvailableVariables(params);
+    for (size_t i = 0; i < params.size(); ++i)  {
+        strid_t arg_id = params[i];
+        IRValue argmem = allocateLocal();
+        genStore(argmem, func->getArg(i));
+        cc.addIDValueMapping(arg_id, argmem);
     }
-    llvm::Value *retval = builder->CreateCall(mainF);
-    builder->CreateRet(retval);
-    return true;
 }
 
-ASTNode IRGenerator::genCall(std::string &name, ASTNode args) {
-    llvm::Function *callee = module->getFunction(name);
-    llvm::Value *value = nullptr;
-    if (args.isNIL()) {
-        value = builder->CreateCall(callee);
+IRValue IRGenerator::genCall(const std::string &name,
+                             const std::vector<IRValue> &args) {
+    Function *callee = module->getFunction(name);
+    if (!callee) {
+        std::cerr << "Undefined function referenced\n";
+        return IRGenerator::NIL();
+    }
+    IRValue val = IRGenerator::NIL();
+    if (args.size()) {
+        val = builder->CreateCall(callee, args);
     } else {
-        std::vector<llvm::Value *> params;
-        for (auto v : args.getValues()) {
-            params.push_back(ASTNode::asPtr(v));
-        }
-        value = builder->CreateCall(callee, params);
+        val = builder->CreateCall(callee);
     }
-    return value;
+    return val;
 }
 
-#undef LLV
+IRValue IRGenerator::genCall(const std::string &name) {
+    return genCall(name, std::vector<IRValue>());
+}
 
 }; // namespace kolang

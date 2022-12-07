@@ -1,14 +1,13 @@
 #ifndef COMPILER_CORE_H
 #define COMPILER_CORE_H
 
-#include "Frame.h"
+#include "AST.h"
 #include "IRGenerator.h"
-
-#include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
+#include "Kolang.h"
+#include "Scope.h"
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace kolang {
@@ -16,44 +15,52 @@ namespace kolang {
 // Singletone with compiler facilities
 class CompilerCore {
     IRGenerator IRG;
-    // Storage of program scopes
-    std::vector<ScopeFrame> scopes;
-    // Storage of function scopes
-    std::vector<FunctionFrame> functions;
-    // Global frame. Manager of global variables.
-    std::unique_ptr<GlobalFrame> global_frame;
-    // Scope stack
-    std::vector<Frame *> frame_stack;
+    std::vector<ASTNode *> node_storage;
+    ASTNode *ast_root;
     // Mapping of names encountered during parser to their unique id
-    std::unordered_map<std::string, strid_t> names_pool;
+    std::vector<std::string> names_pool;
+    // Namespaces stack for tracking available IDs.
+    std::vector<Scope> scope_stack;
 
-    CompilerCore();
+    CompilerCore() = default;
     CompilerCore(const CompilerCore &) = delete;
     CompilerCore &operator=(CompilerCore &) = delete;
 
-    Frame &getCurrentFrame() const;
-    Frame &getGLobalFrame() const;
+    template <class T, class... Args> T *allocateNode(Args &&...args) {
+        node_storage.push_back(
+            dynamic_cast<ASTNode *>(new T(std::forward<Args>(args)...)));
+        return dynamic_cast<T *>(node_storage.back());
+    }
 
   public:
     static CompilerCore &getCCore() {
         static CompilerCore CC;
         return CC;
     }
-    strid_t getNewID() {
-        static strid_t id = 0;
-        return ++id;
+    ~CompilerCore();
+
+    template <class T, class... Args> T *make(Args &&...args) {
+        return allocateNode<T>(std::forward<Args>(args)...);
     }
+    IDNode *makeID(const char *text);
+
     // Get IRGenerator
     IRGenerator &getIRG() { return IRG; }
-    void handleAssignment(ASTNode id, ASTNode val);
-    ASTNode handleVarUse(ASTNode id);
-    void defineFunction(ASTNode function, ASTNode args);
-    void leaveFunction();
+    // Traverse AST and generate IR
+    void generateIR();
+    strid_t getOrCreateID(const char *text);
+    std::string &getStringByID(strid_t id);
+    ASTNode *getRootNode();
+    void setRootNode(ASTNode *node);
     void enterScope();
     void leaveScope();
-
-    strid_t registerName(const char *name);
-    std::string getNameByID(strid_t id) const;
+    IRValue lookup(strid_t id);
+    bool inGlobalScope();
+    // Adds ids to current scope
+    void populateAvailableVariables(strid_t id);
+    void populateAvailableVariables(const std::vector<strid_t> &id_list);
+    // Assigns value to existing id in current scope
+    void addIDValueMapping(strid_t id, IRValue value);
 };
 
 }; // namespace kolang

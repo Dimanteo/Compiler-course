@@ -1,8 +1,9 @@
 %{
 #include "CompilerCore.h"
+#include "AST.h"
 #include <iostream>
 
-#define YYSTYPE kolang::ASTNode
+#define YYSTYPE kolang::ASTNode *
 
 using namespace kolang;
 
@@ -17,7 +18,7 @@ extern int yylineno;
 %token ADD SUB DIV MUL
 %token ENDLN
 %token ID
-%token LE GT EQ NEQ LEQ GEQ
+%token LT GT EQ NEQ LEQ GEQ
 %token ASSIGN
 %token BRA KET FIGBRA FIGKET
 %token COMA
@@ -26,24 +27,29 @@ extern int yylineno;
 %%
 
 Language : Program { 
-        IRGenerator &irg = CompilerCore::getCCore().getIRG();
-        if (irg.finalizeStartFunction()) {
-            YYACCEPT; 
-        } else {
-            YYERROR;
-        }
+        CompilerCore &cc = CompilerCore::getCCore();
+        cc.setRootNode($1);
+        YYACCEPT; 
     }
+;
 
-Program : GlobalDef | Program GlobalDef;
+Program : GlobalDef {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<ExprNode>($1);
+    } 
+    | GlobalDef Program {
+        CompilerCore &cc = CompilerCore::getCCore();
+        ExprNode *expr = cc.make<ExprNode>($1);
+        expr->setNext(dynamic_cast<ExprNode *>($2));
+        $$ = expr;
+    }
+;
 
 GlobalDef : FunctionDef | VarAssignment ENDLN;
 
-FunctionDef : ID ArgsDef FIGBRA  {
+FunctionDef : ID ArgsDef FIGBRA FunctionBody FIGKET {
         CompilerCore &cc = CompilerCore::getCCore();
-        cc.defineFunction($1, $2);
-    } Body FIGKET {
-        CompilerCore &cc = CompilerCore::getCCore();
-        cc.leaveFunction();
+        $$ =  cc.make<FunctionDefNode>($1, $2, $4);
     }
 ;
 
@@ -51,109 +57,132 @@ ArgsDef : BRA NameList KET {
         $$ = $2;
     }
     | BRA KET {
-        $$ = ASTNode::getNIL();
+        $$ = ASTNode::NIL();
     }
+;
 
 NameList : NameList COMA ID {
-        ASTNode &argv = $1;
-        argv.addValue($3);
-        $$ = argv;
+        CompilerCore &cc = CompilerCore::getCCore();
+        IDListNode *id = cc.make<IDListNode>($3);
+        IDListNode *list = dynamic_cast<IDListNode *>($1);
+        list->setNext(id);
+        $$ = list;
     }
-    | ID
-;
-
-Scope : FIGBRA {
+    | ID {
         CompilerCore &cc = CompilerCore::getCCore();
-        cc.enterScope();
-    } Body FIGKET {
-        CompilerCore &cc = CompilerCore::getCCore();
-        cc.leaveScope();
+        $$ = cc.make<IDListNode>($1);
     }
 ;
 
-Body : ENDLN | Expression ENDLN | Body Expression ENDLN;
+FunctionBody : Expression ENDLN FunctionBody {
+        CompilerCore &cc = CompilerCore::getCCore();
+        ExprNode *exprList = cc.make<ExprNode>($1);
+        exprList->setNext(dynamic_cast<ExprNode *>($3));
+        $$ = exprList;
+    }
+    | Expression ENDLN {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<ExprNode>($1);
+    }
+;
 
-Expression : VarAssignment | FunctionCall | Statement | Scope;
+Expression : VarAssignment | FunctionCall | Statement;
 
 Statement : RET { 
-        IRGenerator &irg = CompilerCore::getCCore().getIRG();
-        irg.genRet();
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<ReturnNode>();
     }
     | RET ArithmeticExpr {
-        IRGenerator &irg = CompilerCore::getCCore().getIRG();
-        irg.genRet($2);
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<ReturnNode>($2);
     }
 ;
+
+// LogicExpression : ArithmeticExpr EQ ArithmeticExpr {
+//         IRGenerator &irg = CompilerCore::getCCore().getIRG();
+//         $$ = irg.genCmpEq($1, $3);
+//     }
+//     | ArithmeticExpr NEQ ArithmeticExpr {
+//         $$ = irg.genCmpNeq($1, $3);
+//     }
+//     | ArithmeticExpr LEQ ArithmeticExpr {
+//         $$ = irg.genCmpLeq($1, $3);
+//     }
+//     | ArithmeticExpr GEQ ArithmeticExpr {
+//         $$ = irg.genCmpGeq($1, $3);
+//     }
+//     | ArithmeticExpr LT ArithmeticExpr {
+//         $$ = irg.genCmpLt($1, $3);
+//     }
+//     | ArithmeticExpr GT ArithmeticExpr {
+//         $$ = irg.genCmpGt($1, $3);
+//     }
+// ;
 
 VarAssignment : ID ASSIGN ArithmeticExpr {
     CompilerCore &cc = CompilerCore::getCCore();
-    cc.handleAssignment($1, $3);
+    VarNode *var = cc.make<VarNode>($1);
+    $$ = cc.make<AssignmentNode>(var, $3);
 }
 ;
 
 ArithmeticExpr : FactorExpr
     | ArithmeticExpr ADD FactorExpr { 
         // $$ $1 + $3;
-        IRGenerator &irg = CompilerCore::getCCore().getIRG();
-        $$ = irg.genAdd($1, $3); 
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<AddNode>($1, $3); 
     }
     | ArithmeticExpr SUB FactorExpr { 
         // $$ = $1 - $3;
-        IRGenerator &irg = CompilerCore::getCCore().getIRG();
-        $$ = irg.genSub($1, $3);
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<SubNode>($1, $3);
     }
 ;
 
 FactorExpr : BracketsExpr
     | FactorExpr MUL BracketsExpr { 
         // $$ = $1 * $3; 
-        IRGenerator &irg = CompilerCore::getCCore().getIRG();
-        $$ = irg.genMul($1, $3);
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<MulNode>($1, $3);
     }
     | FactorExpr DIV BracketsExpr { 
         // $$ = $1 / $3;
-        IRGenerator &irg = CompilerCore::getCCore().getIRG();
-        $$ = irg.genDiv($1, $3);
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<DivNode>($1, $3);
     }
 ;
 
 BracketsExpr : BRA ArithmeticExpr KET { $$ = $2; }
-    | Literal
-;
-
-Literal : ID {
-        CompilerCore &cc = CompilerCore::getCCore();
-        ASTNode var = cc.handleVarUse($1);
-        if (var.isNIL()) {
-            std::cerr << "Syntax ERROR: Undefined variable at line "
-                      << yylineno << ".\n";
-            YYERROR;
-        }
-        $$ = var;
-    }
-    | FunctionCall
-    | NUMBER
+    | NUMBER | FunctionCall | VarUse
 ;
 
 FunctionCall : ID ArgsPassing {
     CompilerCore &cc = CompilerCore::getCCore();
-    ASTNode name_node = $1;
-    std::string name = cc.getNameByID(ASTNode::asID(name_node.get()));
-    $$ = cc.getIRG().genCall(name, $2);
+    $$ = cc.make<FunctionCallNode>($1, $2);
 }
 ;
 
-ArgsPassing : BRA ExprList KET {
+ArgsPassing : BRA ValueList KET {
         $$ = $2;
     }
-    | BRA KET { $$ = ASTNode::getNIL(); }
+    | BRA KET { $$ = ASTNode::NIL(); }
 ;
 
-ExprList : ArithmeticExpr
-    | ExprList COMA ArithmeticExpr {
-        ASTNode &argv = $1;
-        argv.addValue($3);
-        $$ = argv;
+VarUse : ID {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<VarNode>($1);
+    }
+;
+
+ValueList : ArithmeticExpr {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<ExprNode>($1);
+    }
+    | ValueList COMA ArithmeticExpr {
+        CompilerCore &cc = CompilerCore::getCCore();
+        ExprNode *list = cc.make<ExprNode>($3);
+        list->setNext(dynamic_cast<ExprNode *>($1));
+        $$ = list;
     }
 ;
 

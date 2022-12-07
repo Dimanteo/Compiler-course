@@ -1,5 +1,5 @@
-#include "parser.hpp"
 #include "CompilerCore.h"
+#include "parser.hpp"
 
 #include <iostream>
 
@@ -11,6 +11,7 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
     kolang::CompilerCore &cc = kolang::CompilerCore::getCCore();
+    cc.generateIR();
     cc.getIRG().dump(std::cout);
     cc.getIRG().executeAndFreeModule();
     return 0;
