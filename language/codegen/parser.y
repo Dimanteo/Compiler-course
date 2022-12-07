@@ -112,6 +112,7 @@ LoopStatement : WHILE BRA LogicExpression KET FIGBRA Body FIGKET {
         $$ = cc.make<WhileNode>($3, $6);
     }
 ;
+
 LogicExpression : ArithmeticExpr EQ ArithmeticExpr {
         CompilerCore &cc = CompilerCore::getCCore();
         $$ = cc.make<EQNode>($1, $3);

@@ -39,7 +39,7 @@ void CompilerCore::enterScope() {
     scope_stack.emplace_back();
 }
 
-void CompilerCore::leaveScope() { 
+void CompilerCore::leaveScope() {
     scope_stack.pop_back();
     if (!scope_stack.empty()) {
         scope_stack.back().applyInsertBlock();

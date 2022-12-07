@@ -1,6 +1,7 @@
 #include "IRGenerator.h"
 #include "AST.h"
 #include "CompilerCore.h"
+#include "libko.h"
 
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
@@ -29,6 +30,13 @@ void IRGenerator::executeAndFreeModule() {
     module = std::make_unique<Module>(genModuleID(), *context);
     ExecutionEngine *ee =
         EngineBuilder(std::unique_ptr<Module>(tmp_ptr)).create();
+    std::unordered_map<std::string, void *> func_map;
+    func_map["print"] = reinterpret_cast<void *>(__kolang_print);
+    func_map["scan"] = reinterpret_cast<void *>(__kolang_scan);
+    ee->InstallLazyFunctionCreator(
+        [&func_map](const std::string fn_name) -> void * {
+            return func_map[fn_name];
+        });
     ee->finalizeObject();
     std::vector<llvm::GenericValue> noargs;
     GenericValue v = ee->runFunction(mainFunc, noargs);
@@ -36,7 +44,6 @@ void IRGenerator::executeAndFreeModule() {
 }
 
 void IRGenerator::dump(std::ostream &outs) {
-    outs << "## [LLVM IR] ##\n";
     std::string out_str;
     llvm::raw_string_ostream os(out_str);
     module->print(os, nullptr);
@@ -48,17 +55,16 @@ void IRGenerator::genStartPrologue() {
     CompilerCore &cc = CompilerCore::getCCore();
     cc.enterScope();
     assert(cc.inGlobalScope() && "Unexpected scope depth");
-    llvm::FunctionType *start_ty =
-        FunctionType::get(builder->getInt64Ty(), false);
-    llvm::Function *start_f = Function::Create(
-        start_ty, Function::ExternalLinkage, Start_func_name, *module);
+    FunctionType *start_ty = FunctionType::get(builder->getInt64Ty(), false);
+    Function *start_f = Function::Create(start_ty, Function::ExternalLinkage,
+                                         Start_func_name, *module);
     BasicBlock *bb = BasicBlock::Create(*context, getBBName(), start_f);
     builder->SetInsertPoint(bb);
 }
 
 void IRGenerator::genStartEpilogue() {
     CompilerCore &cc = CompilerCore::getCCore();
-    llvm::Function *start_f = module->getFunction(Start_func_name);
+    Function *start_f = module->getFunction(Start_func_name);
     assert(start_f && "Start function not found");
     builder->SetInsertPoint(&start_f->getEntryBlock());
     IRValue retval = genCall(Entry_func_name);
@@ -127,7 +133,7 @@ void IRGenerator::declFunction(const std::string &name,
     builder->SetInsertPoint(bb);
     CompilerCore &cc = CompilerCore::getCCore();
     cc.populateAvailableVariables(params);
-    for (size_t i = 0; i < params.size(); ++i)  {
+    for (size_t i = 0; i < params.size(); ++i) {
         strid_t arg_id = params[i];
         IRValue argmem = allocateLocal();
         genStore(argmem, func->getArg(i));
@@ -139,8 +145,13 @@ IRValue IRGenerator::genCall(const std::string &name,
                              const std::vector<IRValue> &args) {
     Function *callee = module->getFunction(name);
     if (!callee) {
-        std::cerr << "Undefined function referenced\n";
-        return IRGenerator::NIL();
+        // Form function prototype and hope that it will be linked later
+        std::vector<llvm::Type *> args_types;
+        for (IRValue arg : args) {
+            args_types.push_back(arg->getType());
+        }
+        FunctionType *calee_ty = FunctionType::get(builder->getInt64Ty(), args_types, false);
+        callee = Function::Create(calee_ty, Function::ExternalLinkage, name, *module);
     }
     IRValue val = IRGenerator::NIL();
     if (args.size()) {
