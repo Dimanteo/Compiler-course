@@ -2,6 +2,7 @@
 #define KOLANG_AST_H
 
 #include "IRGenerator.h"
+#include <functional>
 
 namespace kolang {
 
@@ -168,6 +169,48 @@ class DivNode : public BinaryOpBase {
     virtual ~DivNode() = default;
 };
 
+class LTNode : public BinaryOpBase {
+  public:
+    LTNode(ASTNode *lhs, ASTNode *rhs) : BinaryOpBase(lhs, rhs) {}
+    IRValue emit() override;
+    virtual ~LTNode() = default;
+};
+
+class GTNode : public BinaryOpBase {
+  public:
+    GTNode(ASTNode *lhs, ASTNode *rhs) : BinaryOpBase(lhs, rhs) {}
+    IRValue emit() override;
+    virtual ~GTNode() = default;
+};
+
+class EQNode : public BinaryOpBase {
+  public:
+    EQNode(ASTNode *lhs, ASTNode *rhs) : BinaryOpBase(lhs, rhs) {}
+    IRValue emit() override;
+    virtual ~EQNode() = default;
+};
+
+class NEQNode : public BinaryOpBase {
+  public:
+    NEQNode(ASTNode *lhs, ASTNode *rhs) : BinaryOpBase(lhs, rhs) {}
+    IRValue emit() override;
+    virtual ~NEQNode() = default;
+};
+
+class LEQNode : public BinaryOpBase {
+  public:
+    LEQNode(ASTNode *lhs, ASTNode *rhs) : BinaryOpBase(lhs, rhs) {}
+    IRValue emit() override;
+    virtual ~LEQNode() = default;
+};
+
+class GEQNode : public BinaryOpBase {
+  public:
+    GEQNode(ASTNode *lhs, ASTNode *rhs) : BinaryOpBase(lhs, rhs) {}
+    IRValue emit() override;
+    virtual ~GEQNode() = default;
+};
+
 class NumberNode : public ASTNode {
     numb_t number;
 
@@ -176,6 +219,19 @@ class NumberNode : public ASTNode {
     numb_t getNumber() { return number; }
     IRValue emit() override;
     virtual ~NumberNode() = default;
+};
+
+class IfNode : public ASTNode {
+    ASTNode *condition;
+    ExprNode *true_path;
+
+  public:
+    IfNode(ASTNode *cond, ASTNode *t_path)
+        : IfNode(cond, dynamic_cast<ExprNode *>(t_path)) {}
+    IfNode(ASTNode *cond, ExprNode *t_path)
+        : condition(cond), true_path(t_path) {}
+    IRValue emit() override;
+    virtual ~IfNode() = default;
 };
 
 } // namespace kolang

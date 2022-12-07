@@ -155,4 +155,43 @@ IRValue IRGenerator::genCall(const std::string &name) {
     return genCall(name, std::vector<IRValue>());
 }
 
+IRValue IRGenerator::genLT(IRValue lhs, IRValue rhs) {
+    return builder->CreateICmpSLT(lhs, rhs);
+}
+
+IRValue IRGenerator::genGT(IRValue lhs, IRValue rhs) {
+    return builder->CreateICmpSGT(lhs, rhs);
+}
+
+IRValue IRGenerator::genEQ(IRValue lhs, IRValue rhs) {
+    return builder->CreateICmpEQ(lhs, rhs);
+}
+
+IRValue IRGenerator::genNEQ(IRValue lhs, IRValue rhs) {
+    return builder->CreateICmpNE(lhs, rhs);
+}
+
+IRValue IRGenerator::genLEQ(IRValue lhs, IRValue rhs) {
+    return builder->CreateICmpSLE(lhs, rhs);
+}
+
+IRValue IRGenerator::genGEQ(IRValue lhs, IRValue rhs) {
+    return builder->CreateICmpSGE(lhs, rhs);
+}
+
+void IRGenerator::genIf(IRValue condition, ASTNode *true_path) {
+    CompilerCore &cc = CompilerCore::getCCore();
+    BasicBlock *intro = builder->GetInsertBlock();
+    Function *curr_func = intro->getParent();
+    BasicBlock *true_bb = BasicBlock::Create(*context, getBBName(), curr_func);
+    BasicBlock *outro = BasicBlock::Create(*context, getBBName(), curr_func);
+    builder->CreateCondBr(condition, true_bb, outro);
+    cc.enterScope();
+    builder->SetInsertPoint(true_bb);
+    true_path->emit();
+    builder->CreateBr(outro);
+    cc.leaveScope();
+    builder->SetInsertPoint(outro);
+}
+
 }; // namespace kolang

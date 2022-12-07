@@ -46,11 +46,18 @@ class IRGenerator {
     void emitAST(ASTNode *entry);
     llvm::BasicBlock *getInsertBlock() { return builder->GetInsertBlock(); }
     void setInsertBlock(llvm::BasicBlock *bb) { builder->SetInsertPoint(bb); }
+    void genIf(IRValue condition, ASTNode *true_path);
 
     IRValue genAdd(IRValue lhs, IRValue rhs);
     IRValue genSub(IRValue lhs, IRValue rhs);
     IRValue genMul(IRValue lhs, IRValue rhs);
     IRValue genDiv(IRValue lhs, IRValue rhs);
+    IRValue genLT(IRValue lhs, IRValue rhs);
+    IRValue genGT(IRValue lhs, IRValue rhs);
+    IRValue genEQ(IRValue lhs, IRValue rhs);
+    IRValue genNEQ(IRValue lhs, IRValue rhs);
+    IRValue genLEQ(IRValue lhs, IRValue rhs);
+    IRValue genGEQ(IRValue lhs, IRValue rhs);
     IRValue genNumber(numb_t val);
     IRValue allocateGlobal(const std::string &name);
     IRValue allocateLocal();

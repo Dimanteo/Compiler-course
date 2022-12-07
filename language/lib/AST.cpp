@@ -18,8 +18,8 @@ IRValue ScopeNode::emit() {
 
 IRValue AssignmentNode::emit() {
     CompilerCore &cc = CompilerCore::getCCore();
-    IRValue var = variable->emit();
     strid_t id = variable->getID();
+    IRValue var = cc.lookup(id);
     if (IRGenerator::isNIL(var)) {
         if (cc.inGlobalScope()) {
             std::string &name = cc.getStringByID(id);
@@ -118,6 +118,41 @@ IRValue VarNode::emit() {
 IRValue NumberNode::emit() {
     IRGenerator &IRG = CompilerCore::getCCore().getIRG();
     return IRG.genNumber(number);
+}
+
+IRValue IfNode::emit() {
+    IRGenerator &IRG = CompilerCore::getCCore().getIRG();
+    IRG.genIf(condition->emit(), true_path);
+    return IRGenerator::NIL();
+}
+
+IRValue LTNode::emit() {
+    IRGenerator &IRG = CompilerCore::getCCore().getIRG();
+    return IRG.genLT(left->emit(), right->emit());
+}
+IRValue GTNode::emit() {
+    IRGenerator &IRG = CompilerCore::getCCore().getIRG();
+    return IRG.genGT(left->emit(), right->emit());
+}
+
+IRValue EQNode::emit() {
+    IRGenerator &IRG = CompilerCore::getCCore().getIRG();
+    return IRG.genEQ(left->emit(), right->emit());
+}
+
+IRValue NEQNode::emit() {
+    IRGenerator &IRG = CompilerCore::getCCore().getIRG();
+    return IRG.genNEQ(left->emit(), right->emit());
+}
+
+IRValue LEQNode::emit() {
+    IRGenerator &IRG = CompilerCore::getCCore().getIRG();
+    return IRG.genLEQ(left->emit(), right->emit());
+}
+
+IRValue GEQNode::emit() {
+    IRGenerator &IRG = CompilerCore::getCCore().getIRG();
+    return IRG.genGEQ(left->emit(), right->emit());
 }
 
 } // namespace kolang

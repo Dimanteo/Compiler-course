@@ -23,6 +23,7 @@ extern int yylineno;
 %token BRA KET FIGBRA FIGKET
 %token COMA
 %token RET
+%token IF
 
 %%
 
@@ -47,7 +48,7 @@ Program : GlobalDef {
 
 GlobalDef : FunctionDef | VarAssignment ENDLN;
 
-FunctionDef : ID ArgsDef FIGBRA FunctionBody FIGKET {
+FunctionDef : ID ArgsDef FIGBRA Body FIGKET {
         CompilerCore &cc = CompilerCore::getCCore();
         $$ =  cc.make<FunctionDefNode>($1, $2, $4);
     }
@@ -74,21 +75,23 @@ NameList : NameList COMA ID {
     }
 ;
 
-FunctionBody : Expression ENDLN FunctionBody {
+Body : Expression Body {
         CompilerCore &cc = CompilerCore::getCCore();
         ExprNode *exprList = cc.make<ExprNode>($1);
-        exprList->setNext(dynamic_cast<ExprNode *>($3));
+        exprList->setNext(dynamic_cast<ExprNode *>($2));
         $$ = exprList;
     }
-    | Expression ENDLN {
+    | Expression {
         CompilerCore &cc = CompilerCore::getCCore();
         $$ = cc.make<ExprNode>($1);
     }
 ;
 
-Expression : VarAssignment | FunctionCall | Statement;
+Expression : VarAssignment ENDLN | FunctionCall ENDLN | Statement;
 
-Statement : RET { 
+Statement : RetStatement ENDLN | IfStatement;
+
+RetStatement : RET { 
         CompilerCore &cc = CompilerCore::getCCore();
         $$ = cc.make<ReturnNode>();
     }
@@ -98,26 +101,37 @@ Statement : RET {
     }
 ;
 
-// LogicExpression : ArithmeticExpr EQ ArithmeticExpr {
-//         IRGenerator &irg = CompilerCore::getCCore().getIRG();
-//         $$ = irg.genCmpEq($1, $3);
-//     }
-//     | ArithmeticExpr NEQ ArithmeticExpr {
-//         $$ = irg.genCmpNeq($1, $3);
-//     }
-//     | ArithmeticExpr LEQ ArithmeticExpr {
-//         $$ = irg.genCmpLeq($1, $3);
-//     }
-//     | ArithmeticExpr GEQ ArithmeticExpr {
-//         $$ = irg.genCmpGeq($1, $3);
-//     }
-//     | ArithmeticExpr LT ArithmeticExpr {
-//         $$ = irg.genCmpLt($1, $3);
-//     }
-//     | ArithmeticExpr GT ArithmeticExpr {
-//         $$ = irg.genCmpGt($1, $3);
-//     }
-// ;
+IfStatement : IF BRA LogicExpression KET FIGBRA Body FIGKET {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<IfNode>($3, $6);
+    }
+;
+
+LogicExpression : ArithmeticExpr EQ ArithmeticExpr {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<EQNode>($1, $3);
+    }
+    | ArithmeticExpr NEQ ArithmeticExpr {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<NEQNode>($1, $3);
+    }
+    | ArithmeticExpr LEQ ArithmeticExpr {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<LEQNode>($1, $3);
+    }
+    | ArithmeticExpr GEQ ArithmeticExpr {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<GEQNode>($1, $3);
+    }
+    | ArithmeticExpr LT ArithmeticExpr {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<LTNode>($1, $3);
+    }
+    | ArithmeticExpr GT ArithmeticExpr {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<GTNode>($1, $3);
+    }
+;
 
 VarAssignment : ID ASSIGN ArithmeticExpr {
     CompilerCore &cc = CompilerCore::getCCore();

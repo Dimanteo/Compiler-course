@@ -39,6 +39,7 @@ extern "C" int yylex();
     return NUMBER; 
 }
 [r][e][t][u][r][n] { return RET; }
+[i][f] {return IF; }
 [A-Za-z_]+[0-9A-Za-z_]* {
     CompilerCore &cc = CompilerCore::getCCore();
     yylval  = cc.makeID(yytext);
