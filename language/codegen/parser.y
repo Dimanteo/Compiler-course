@@ -17,10 +17,11 @@ extern int yylineno;
 %token NUMBER
 %token ADD SUB DIV MUL
 %token ENDLN
+%token VARDEF
 %token ID
 %token LT GT EQ NEQ LEQ GEQ
 %token ASSIGN
-%token BRA KET FIGBRA FIGKET
+%token BRA KET FIGBRA FIGKET SQBRA SQKET
 %token COMA
 %token RET
 %token IF WHILE
@@ -46,7 +47,7 @@ Program : GlobalDef {
     }
 ;
 
-GlobalDef : FunctionDef | VarAssignment ENDLN;
+GlobalDef : FunctionDef | VarDefinition ENDLN;
 
 FunctionDef : ID ArgsDef FIGBRA Body FIGKET {
         CompilerCore &cc = CompilerCore::getCCore();
@@ -87,7 +88,26 @@ Body : Expression Body {
     }
 ;
 
-Expression : VarAssignment ENDLN | FunctionCall ENDLN | Statement;
+Expression : VarAssignment ENDLN | VarDefinition ENDLN | FunctionCall ENDLN | Statement 
+            | ArrayDef ENDLN | ArrayAssignment ENDLN;
+
+ArrayDef : VARDEF ID SQBRA NUMBER SQKET {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<ArrayDefNode>($2, $4);
+    }
+;
+
+ArrayAssignment : ArraySet ASSIGN ArithmeticExpr {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<AssignmentNode>($1, $3);
+    }
+;
+
+ArraySet : ID SQBRA ArithmeticExpr SQKET {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<ArrayAccessNode>($1, $3);
+    }
+;
 
 Statement : RetStatement ENDLN | IfStatement | LoopStatement;
 
@@ -139,11 +159,17 @@ LogicExpression : ArithmeticExpr EQ ArithmeticExpr {
     }
 ;
 
-VarAssignment : ID ASSIGN ArithmeticExpr {
-    CompilerCore &cc = CompilerCore::getCCore();
-    VarNode *var = cc.make<VarNode>($1);
-    $$ = cc.make<AssignmentNode>(var, $3);
-}
+VarDefinition : VARDEF ID ASSIGN ArithmeticExpr {
+        CompilerCore &cc = CompilerCore::getCCore();
+        VarDefNode *var = cc.make<VarDefNode>($2);
+        $$ = cc.make<AssignmentNode>(var, $4);
+    }
+
+VarAssignment :  ID ASSIGN ArithmeticExpr {
+        CompilerCore &cc = CompilerCore::getCCore();
+        VarAccessNode *var = cc.make<VarAccessNode>($1);
+        $$ = cc.make<AssignmentNode>(var, $3);
+    }
 ;
 
 ArithmeticExpr : FactorExpr
@@ -173,7 +199,13 @@ FactorExpr : BracketsExpr
 ;
 
 BracketsExpr : BRA ArithmeticExpr KET { $$ = $2; }
-    | NUMBER | FunctionCall | VarUse
+    | NUMBER | FunctionCall | VarUse | ArrayGet
+;
+
+ArrayGet : ID SQBRA ArithmeticExpr SQKET {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<ArrayUseNode>($1, $3);
+    }
 ;
 
 FunctionCall : ID ArgsPassing {
@@ -190,7 +222,7 @@ ArgsPassing : BRA ValueList KET {
 
 VarUse : ID {
         CompilerCore &cc = CompilerCore::getCCore();
-        $$ = cc.make<VarNode>($1);
+        $$ = cc.make<VarUseNode>($1);
     }
 ;
 

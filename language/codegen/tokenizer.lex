@@ -25,6 +25,8 @@ extern "C" int yylex();
 [)]     { return KET; }
 [{]     { return FIGBRA; }
 [}]     { return FIGKET; }
+[[]     { return SQBRA; }
+[]]     { return SQKET; }
 [=][=]    { return EQ; }
 [<][=]    { return LEQ; }
 [>][=]    { return GEQ; }
@@ -38,6 +40,7 @@ extern "C" int yylex();
     yylval = cc.make<NumberNode>(val);
     return NUMBER; 
 }
+[l][e][t] { return VARDEF; }
 [r][e][t][u][r][n] { return RET; }
 [i][f] {return IF; }
 [w][h][i][l][e] { return WHILE; }

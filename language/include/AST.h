@@ -69,14 +69,36 @@ class BinaryOpBase : public ASTNode {
     virtual ~BinaryOpBase() = default;
 };
 
-class VarNode : public ASTNode {
+class VarDefNode : public ASTNode {
     IDNode *name;
 
   public:
-    VarNode(ASTNode *node) : name(dynamic_cast<IDNode *>(node)) {}
+    VarDefNode(ASTNode *node) : name(dynamic_cast<IDNode *>(node)) {}
     IRValue emit() override;
     strid_t getID() { return name->getID(); }
-    virtual ~VarNode() = default;
+    virtual ~VarDefNode() = default;
+};
+
+class VarUseNode : public ASTNode {
+    IDNode *name;
+
+  public:
+    VarUseNode(IDNode *id) : name(id) {}
+    VarUseNode(ASTNode *id) : VarUseNode(dynamic_cast<IDNode *>(id)) {}
+    IRValue emit() override;
+    strid_t getID() { return name->getID(); }
+    virtual ~VarUseNode() = default;
+};
+
+class VarAccessNode : public ASTNode {
+    IDNode *name;
+
+  public:
+    VarAccessNode(IDNode *id) : name(id) {}
+    VarAccessNode(ASTNode *id) : VarAccessNode(dynamic_cast<IDNode *>(id)) {}
+    IRValue emit() override;
+    strid_t getID() { return name->getID(); }
+    virtual ~VarAccessNode() = default;
 };
 
 class ScopeNode : public ASTNode {
@@ -90,13 +112,11 @@ class ScopeNode : public ASTNode {
 };
 
 class AssignmentNode : public ASTNode {
-    VarNode *variable;
+    ASTNode *variable;
     ASTNode *value;
 
   public:
-    AssignmentNode(ASTNode *var, ASTNode *data)
-        : AssignmentNode(dynamic_cast<VarNode *>(var), data) {}
-    AssignmentNode(VarNode *var, ASTNode *data) : variable(var), value(data) {}
+    AssignmentNode(ASTNode *var, ASTNode *data) : variable(var), value(data) {}
     IRValue emit() override;
     virtual ~AssignmentNode() = default;
 };
@@ -244,6 +264,45 @@ class WhileNode : public ASTNode {
     WhileNode(ASTNode *cond, ExprNode *code) : condition(cond), body(code) {}
     IRValue emit() override;
     virtual ~WhileNode() = default;
+};
+
+class ArrayDefNode : public ASTNode {
+    IDNode *name;
+    NumberNode *size;
+
+  public:
+    ArrayDefNode(ASTNode *id, ASTNode *len)
+        : ArrayDefNode(dynamic_cast<IDNode *>(id),
+                       dynamic_cast<NumberNode *>(len)) {}
+    ArrayDefNode(IDNode *id, NumberNode *len) : name(id), size(len) {}
+    IRValue emit() override;
+    virtual ~ArrayDefNode() = default;
+};
+
+class ArrayUseNode : public ASTNode {
+    IDNode *name;
+    ASTNode *index;
+
+  public:
+    ArrayUseNode(ASTNode *id, ASTNode *idx)
+        : ArrayUseNode(dynamic_cast<IDNode *>(id),
+                       dynamic_cast<ASTNode *>(idx)) {}
+    ArrayUseNode(IDNode *id, ASTNode *idx) : name(id), index(idx) {}
+    IRValue emit() override;
+    virtual ~ArrayUseNode() = default;
+};
+
+class ArrayAccessNode : public ASTNode {
+    IDNode *name;
+    ASTNode *index;
+
+  public:
+    ArrayAccessNode(ASTNode *id, ASTNode *idx)
+        : ArrayAccessNode(dynamic_cast<IDNode *>(id),
+                          dynamic_cast<ASTNode *>(idx)) {}
+    ArrayAccessNode(IDNode *id, ASTNode *idx) : name(id), index(idx) {}
+    IRValue emit() override;
+    virtual ~ArrayAccessNode() = default;
 };
 
 } // namespace kolang

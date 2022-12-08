@@ -150,8 +150,10 @@ IRValue IRGenerator::genCall(const std::string &name,
         for (IRValue arg : args) {
             args_types.push_back(arg->getType());
         }
-        FunctionType *calee_ty = FunctionType::get(builder->getInt64Ty(), args_types, false);
-        callee = Function::Create(calee_ty, Function::ExternalLinkage, name, *module);
+        FunctionType *calee_ty =
+            FunctionType::get(builder->getInt64Ty(), args_types, false);
+        callee = Function::Create(calee_ty, Function::ExternalLinkage, name,
+                                  *module);
     }
     IRValue val = IRGenerator::NIL();
     if (args.size()) {
@@ -211,14 +213,30 @@ void IRGenerator::genWhile(ASTNode *condition, ASTNode *body) {
     Function *curr_func = intro->getParent();
     BasicBlock *loop_bb = BasicBlock::Create(*context, getBBName(), curr_func);
     BasicBlock *outro = BasicBlock::Create(*context, getBBName(), curr_func);
-    builder->CreateBr(loop_bb);
+    IRValue cond_val = condition->emit();
+    builder->CreateCondBr(cond_val, loop_bb, outro);
     cc.enterScope();
     builder->SetInsertPoint(loop_bb);
-    IRValue cond_val = condition->emit();
     body->emit();
+    cond_val = condition->emit();
     builder->CreateCondBr(cond_val, loop_bb, outro);
     cc.leaveScope();
     builder->SetInsertPoint(outro);
+}
+
+IRValue IRGenerator::genArrayDef(numb_t size) {
+    ArrayType *arr_ty = ArrayType::get(builder->getInt64Ty(), size);
+    IRValue arr = builder->CreateAlloca(arr_ty);
+    return arr;
+}
+
+IRValue IRGenerator::genArrayAccess(strid_t id, IRValue index) {
+    CompilerCore &cc = CompilerCore::getCCore();
+    IRValue arr = cc.lookup(id);
+    assert(arr->getType()->getContainedType(0)->isArrayTy() &&
+           "Incorrect value type");
+    return builder->CreateGEP(arr->getType()->getContainedType(0), arr,
+                              {builder->getInt64(0), index});
 }
 
 }; // namespace kolang

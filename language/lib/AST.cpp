@@ -17,22 +17,10 @@ IRValue ScopeNode::emit() {
 }
 
 IRValue AssignmentNode::emit() {
-    CompilerCore &cc = CompilerCore::getCCore();
-    strid_t id = variable->getID();
-    IRValue var = cc.lookup(id);
-    if (IRGenerator::isNIL(var)) {
-        if (cc.inGlobalScope()) {
-            std::string &name = cc.getStringByID(id);
-            var = cc.getIRG().allocateGlobal(name);
-        } else {
-            var = cc.getIRG().allocateLocal();
-        }
-        cc.populateAvailableVariables(id);
-        cc.addIDValueMapping(id, var);
-    }
-    assert(!IRGenerator::isNIL(var) && "Failed to get variable");
-    cc.getIRG().genStore(var, value->emit());
-    return var;
+    IRGenerator &IRG = CompilerCore::getCCore().getIRG();
+    IRValue result = variable->emit();
+    IRG.genStore(result, value->emit());
+    return result;
 }
 
 IRValue FunctionDefNode::emit() {
@@ -106,13 +94,30 @@ IRValue DivNode::emit() {
     return IRG.genDiv(left->emit(), right->emit());
 }
 
-IRValue VarNode::emit() {
+IRValue VarDefNode::emit() {
     CompilerCore &cc = CompilerCore::getCCore();
-    IRValue var = cc.lookup(name->getID());
-    if (IRGenerator::isNIL(var)) {
-        return var;
+    strid_t id = name->getID();
+    IRValue var = IRGenerator::NIL();
+    if (cc.inGlobalScope()) {
+        std::string &name = cc.getStringByID(id);
+        var = cc.getIRG().allocateGlobal(name);
+    } else {
+        var = cc.getIRG().allocateLocal();
     }
-    return cc.getIRG().genLoad(var);
+    cc.populateAvailableVariables(id);
+    cc.addIDValueMapping(id, var);
+    return var;
+}
+
+IRValue VarUseNode::emit() {
+    CompilerCore &cc = CompilerCore::getCCore();
+    IRValue memory = cc.lookup(name->getID());
+    return cc.getIRG().genLoad(memory);
+}
+
+IRValue VarAccessNode::emit() {
+    CompilerCore &cc = CompilerCore::getCCore();
+    return cc.lookup(name->getID());
 }
 
 IRValue NumberNode::emit() {
@@ -159,6 +164,26 @@ IRValue WhileNode::emit() {
     IRGenerator &IRG = CompilerCore::getCCore().getIRG();
     IRG.genWhile(condition, body);
     return IRGenerator::NIL();
+}
+
+IRValue ArrayDefNode::emit() {
+    CompilerCore &cc = CompilerCore::getCCore();
+    strid_t id = name->getID();
+    IRValue array_val = cc.getIRG().genArrayDef(size->getNumber());
+    cc.populateAvailableVariables(id);
+    cc.addIDValueMapping(id, array_val);
+    return array_val;
+}
+
+IRValue ArrayUseNode::emit() {
+    IRGenerator &IRG = CompilerCore::getCCore().getIRG();
+    IRValue memory = IRG.genArrayAccess(name->getID(), index->emit());
+    return IRG.genLoad(memory);
+}
+
+IRValue ArrayAccessNode::emit() {
+    IRGenerator &IRG = CompilerCore::getCCore().getIRG();
+    return IRG.genArrayAccess(name->getID(), index->emit());
 }
 
 } // namespace kolang

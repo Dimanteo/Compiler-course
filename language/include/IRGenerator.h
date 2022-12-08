@@ -71,6 +71,8 @@ class IRGenerator {
     IRValue genCall(const std::string &name);
     void genReturn(IRValue val);
     void genReturn();
+    IRValue genArrayDef(numb_t size);
+    IRValue genArrayAccess(strid_t id, IRValue index);
 };
 
 }; // namespace kolang
