@@ -8,6 +8,10 @@
 
 namespace kolang {
 
+bool isVariableType(TYPE_ID type) { return type == TYPE_ID::INT64; }
+
+bool isArrayType(TYPE_ID type) { return type == ARR_INT64; }
+
 IRValue ScopeNode::emit() {
     CompilerCore &cc = CompilerCore::getCCore();
     cc.enterScope();
@@ -30,12 +34,8 @@ IRValue FunctionDefNode::emit() {
     if (ASTNode::isNIL(arguments)) {
         cc.getIRG().declFunction(func_name);
     } else {
-        std::vector<IDNode *> arg_nodes = arguments->emitAsList();
-        std::vector<strid_t> arg_ids;
-        for (IDNode *node : arg_nodes) {
-            arg_ids.push_back(node->getID());
-        }
-        cc.getIRG().declFunction(func_name, arg_ids);
+        std::vector<TypeIDNode *> arg_nodes = arguments->emitAsList();
+        cc.getIRG().declFunction(func_name, arg_nodes);
     }
     std::vector<ASTNode *> body_exprs = body->emitAsList();
     for (ASTNode *expr : body_exprs) {
@@ -109,9 +109,17 @@ IRValue VarDefNode::emit() {
     return var;
 }
 
+IRValue IDNode::emit() {
+    CompilerCore &cc = CompilerCore::getCCore();
+    return cc.lookup(id);
+}
+
 IRValue VarUseNode::emit() {
     CompilerCore &cc = CompilerCore::getCCore();
-    IRValue memory = cc.lookup(name->getID());
+    IRValue memory = name->emit();
+    if (memory->getType()->getContainedType(0)->isArrayTy()) {
+        return memory;
+    }
     return cc.getIRG().genLoad(memory);
 }
 

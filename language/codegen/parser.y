@@ -63,16 +63,26 @@ ArgsDef : BRA NameList KET {
     }
 ;
 
-NameList : NameList COMA ID {
+NameList : NameList COMA ParamDef {
         CompilerCore &cc = CompilerCore::getCCore();
-        IDListNode *id = cc.make<IDListNode>($3);
-        IDListNode *list = dynamic_cast<IDListNode *>($1);
+        TypeIDListNode *id = cc.make<TypeIDListNode>($3);
+        TypeIDListNode *list = dynamic_cast<TypeIDListNode *>($1);
         list->setNext(id);
         $$ = list;
     }
+    | ParamDef { 
+        CompilerCore &cc = CompilerCore::getCCore();
+        TypeIDListNode *list = cc.make<TypeIDListNode>($1);
+        $$ = list;
+    }
+
+ParamDef : ID SQBRA NUMBER SQKET {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<TypeIDNode>(TYPE_ID::ARR_INT64, $1, $3);
+    }
     | ID {
         CompilerCore &cc = CompilerCore::getCCore();
-        $$ = cc.make<IDListNode>($1);
+        $$ = cc.make<TypeIDNode>(TYPE_ID::INT64, $1);
     }
 ;
 
@@ -220,12 +230,6 @@ ArgsPassing : BRA ValueList KET {
     | BRA KET { $$ = ASTNode::NIL(); }
 ;
 
-VarUse : ID {
-        CompilerCore &cc = CompilerCore::getCCore();
-        $$ = cc.make<VarUseNode>($1);
-    }
-;
-
 ValueList : ArithmeticExpr {
         CompilerCore &cc = CompilerCore::getCCore();
         $$ = cc.make<ExprNode>($1);
@@ -235,6 +239,12 @@ ValueList : ArithmeticExpr {
         ExprNode *list = cc.make<ExprNode>($3);
         list->setNext(dynamic_cast<ExprNode *>($1));
         $$ = list;
+    }
+;
+
+VarUse : ID {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<VarUseNode>($1);
     }
 ;
 

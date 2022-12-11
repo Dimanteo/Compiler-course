@@ -10,6 +10,7 @@
 namespace kolang {
 
 class ASTNode;
+class TypeIDNode;
 
 using IRValue = llvm::Value *;
 
@@ -65,7 +66,7 @@ class IRGenerator {
     IRValue genLoad(IRValue ptr);
     void genStore(IRValue ptr, IRValue value);
     void declFunction(const std::string &name,
-                      const std::vector<strid_t> &params);
+                      const std::vector<TypeIDNode *> &params);
     void declFunction(const std::string &name);
     IRValue genCall(const std::string &name, const std::vector<IRValue> &args);
     IRValue genCall(const std::string &name);

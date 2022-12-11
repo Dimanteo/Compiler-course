@@ -10,6 +10,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 using namespace llvm;
@@ -123,8 +124,26 @@ void IRGenerator::declFunction(const std::string &name) {
 }
 
 void IRGenerator::declFunction(const std::string &name,
-                               const std::vector<strid_t> &params) {
-    std::vector<Type *> par_types(params.size(), builder->getInt64Ty());
+                               const std::vector<TypeIDNode *> &params) {
+    std::vector<Type *> par_types;
+    std::vector<strid_t> par_ids;
+    for (TypeIDNode *node : params) {
+        par_ids.push_back(node->getID());
+        TYPE_ID type = node->getType();
+        switch (type) {
+        case TYPE_ID::INT64:
+            par_types.push_back(builder->getInt64Ty());
+            break;
+        case TYPE_ID::ARR_INT64:
+            par_types.push_back(
+                ArrayType::get(builder->getInt64Ty(), node->getSize())
+                    ->getPointerTo());
+            break;
+        default:
+            llvm_unreachable("Unknown argument type");
+            break;
+        }
+    }
     FunctionType *f_type =
         FunctionType::get(builder->getInt64Ty(), par_types, false);
     Function *func =
@@ -132,12 +151,18 @@ void IRGenerator::declFunction(const std::string &name,
     BasicBlock *bb = BasicBlock::Create(*context, getBBName(), func);
     builder->SetInsertPoint(bb);
     CompilerCore &cc = CompilerCore::getCCore();
-    cc.populateAvailableVariables(params);
+    cc.populateAvailableVariables(par_ids);
     for (size_t i = 0; i < params.size(); ++i) {
-        strid_t arg_id = params[i];
-        IRValue argmem = allocateLocal();
-        genStore(argmem, func->getArg(i));
-        cc.addIDValueMapping(arg_id, argmem);
+        TYPE_ID arg_ty = params[i]->getType();
+        strid_t arg_id = par_ids[i];
+        if (isVariableType(arg_ty)) {
+            IRValue argmem = allocateLocal();
+            genStore(argmem, func->getArg(i));
+            cc.addIDValueMapping(arg_id, argmem);
+        } else if (isArrayType(arg_ty)) {
+            // Arrays are passed as pointer
+            cc.addIDValueMapping(arg_id, func->getArg(i));
+        }
     }
 }
 

@@ -6,6 +6,12 @@
 
 namespace kolang {
 
+enum TYPE_ID { INT64, ARR_INT64 };
+
+bool isVariableType(TYPE_ID type);
+
+bool isArrayType(TYPE_ID type);
+
 class ASTNode {
   public:
     // Get null node
@@ -51,13 +57,44 @@ class IDNode : public ASTNode {
   public:
     IDNode(strid_t string_id) : id(string_id) {}
     strid_t getID() { return id; }
-    IRValue emit() override { return IRGenerator::NIL(); };
+    IRValue emit() override;
     virtual ~IDNode() = default;
+};
+
+class NumberNode : public ASTNode {
+    numb_t number;
+
+  public:
+    NumberNode(numb_t num) : number(num) {}
+    numb_t getNumber() { return number; }
+    IRValue emit() override;
+    virtual ~NumberNode() = default;
+};
+
+class TypeIDNode : public IDNode {
+    TYPE_ID type;
+    size_t size; // Number of elements for array-like types
+  public:
+    TypeIDNode(TYPE_ID ty, IDNode *id_node)
+        : IDNode(id_node->getID()), type(ty), size(0) {}
+    TypeIDNode(TYPE_ID ty, IDNode *id_node, NumberNode *sz)
+        : IDNode(id_node->getID()), type(ty), size(sz->getNumber()) {}
+    TypeIDNode(TYPE_ID ty, ASTNode *id_node, ASTNode *sz)
+        : TypeIDNode(ty, dynamic_cast<IDNode *>(id_node),
+                     dynamic_cast<NumberNode *>(sz)) {}
+    TypeIDNode(TYPE_ID ty, ASTNode *id_node)
+        : TypeIDNode(ty, dynamic_cast<IDNode *>(id_node)) {}
+    IRValue emit() override { return IDNode::emit(); }
+    TYPE_ID getType() const { return type; }
+    size_t getSize() const { return size; }
+    virtual ~TypeIDNode() = default;
 };
 
 using ExprNode = ListNode<ASTNode>;
 
 using IDListNode = ListNode<IDNode>;
+
+using TypeIDListNode = ListNode<TypeIDNode>;
 
 class BinaryOpBase : public ASTNode {
   protected:
@@ -123,15 +160,15 @@ class AssignmentNode : public ASTNode {
 
 class FunctionDefNode : public ASTNode {
     IDNode *name;
-    IDListNode *arguments;
+    TypeIDListNode *arguments;
     ExprNode *body;
 
   public:
     FunctionDefNode(ASTNode *fname, ASTNode *args, ASTNode *code)
         : FunctionDefNode(dynamic_cast<IDNode *>(fname),
-                          dynamic_cast<IDListNode *>(args),
+                          dynamic_cast<TypeIDListNode *>(args),
                           dynamic_cast<ExprNode *>(code)) {}
-    FunctionDefNode(IDNode *fname, IDListNode *args, ExprNode *code)
+    FunctionDefNode(IDNode *fname, TypeIDListNode *args, ExprNode *code)
         : name(fname), arguments(args), body(code) {}
     IRValue emit() override;
     virtual ~FunctionDefNode() = default;
@@ -229,16 +266,6 @@ class GEQNode : public BinaryOpBase {
     GEQNode(ASTNode *lhs, ASTNode *rhs) : BinaryOpBase(lhs, rhs) {}
     IRValue emit() override;
     virtual ~GEQNode() = default;
-};
-
-class NumberNode : public ASTNode {
-    numb_t number;
-
-  public:
-    NumberNode(numb_t num) : number(num) {}
-    numb_t getNumber() { return number; }
-    IRValue emit() override;
-    virtual ~NumberNode() = default;
 };
 
 class IfNode : public ASTNode {
