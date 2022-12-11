@@ -12,6 +12,12 @@ constexpr const char *Start_func_name = "__kolang_start";
 using strid_t = uint64_t;
 using numb_t = int64_t;
 
+constexpr numb_t PRECISION = 1e6;
+
+constexpr numb_t normalize(numb_t val) {
+    return val / kolang::PRECISION;
+}
+
 }; // namespace kolang
 
 #endif

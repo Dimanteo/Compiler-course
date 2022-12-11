@@ -209,8 +209,15 @@ FactorExpr : BracketsExpr
 ;
 
 BracketsExpr : BRA ArithmeticExpr KET { $$ = $2; }
-    | NUMBER | FunctionCall | VarUse | ArrayGet
+    | Number | FunctionCall | VarUse | ArrayGet
 ;
+
+Number : SUB NUMBER {
+        CompilerCore &cc = CompilerCore::getCCore();
+        NumberNode *num = dynamic_cast<NumberNode *>($2);
+        num->setNumber(-num->getNumber());
+        $$ = num;
+    } | NUMBER;
 
 ArrayGet : ID SQBRA ArithmeticExpr SQKET {
         CompilerCore &cc = CompilerCore::getCCore();

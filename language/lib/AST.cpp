@@ -177,7 +177,8 @@ IRValue WhileNode::emit() {
 IRValue ArrayDefNode::emit() {
     CompilerCore &cc = CompilerCore::getCCore();
     strid_t id = name->getID();
-    IRValue array_val = cc.getIRG().genArrayDef(size->getNumber());
+    IRValue array_val =
+        cc.getIRG().genArrayDef(size->getNumber() / kolang::PRECISION);
     cc.populateAvailableVariables(id);
     cc.addIDValueMapping(id, array_val);
     return array_val;
@@ -185,13 +186,14 @@ IRValue ArrayDefNode::emit() {
 
 IRValue ArrayUseNode::emit() {
     IRGenerator &IRG = CompilerCore::getCCore().getIRG();
-    IRValue memory = IRG.genArrayAccess(name->getID(), index->emit());
+    IRValue memory =
+        IRG.genArrayAccess(name->getID(), IRG.normalize(index->emit()));
     return IRG.genLoad(memory);
 }
 
 IRValue ArrayAccessNode::emit() {
     IRGenerator &IRG = CompilerCore::getCCore().getIRG();
-    return IRG.genArrayAccess(name->getID(), index->emit());
+    return IRG.genArrayAccess(name->getID(), IRG.normalize(index->emit()));
 }
 
 } // namespace kolang

@@ -1,0 +1,8 @@
+main() {
+    let x = -4;
+    print(x);
+    let y = 0.25;
+    print(y);
+    print(x + y);
+    return 0;
+}

@@ -85,11 +85,13 @@ IRValue IRGenerator::genSub(IRValue lhs, IRValue rhs) {
 }
 
 IRValue IRGenerator::genMul(IRValue lhs, IRValue rhs) {
-    return builder->CreateMul(lhs, rhs);
+    IRValue mul_val = builder->CreateMul(lhs, rhs);
+    return builder->CreateSDiv(mul_val, builder->getInt64(kolang::PRECISION));
 }
 
 IRValue IRGenerator::genDiv(IRValue lhs, IRValue rhs) {
-    return builder->CreateUDiv(lhs, rhs);
+    IRValue div_val = builder->CreateSDiv(lhs, rhs);
+    return builder->CreateMul(div_val, builder->getInt64(kolang::PRECISION));
 }
 
 IRValue IRGenerator::genNumber(numb_t val) { return builder->getInt64(val); }
@@ -262,6 +264,10 @@ IRValue IRGenerator::genArrayAccess(strid_t id, IRValue index) {
            "Incorrect value type");
     return builder->CreateGEP(arr->getType()->getContainedType(0), arr,
                               {builder->getInt64(0), index});
+}
+
+IRValue IRGenerator::normalize(IRValue val) {
+    return builder->CreateSDiv(val, builder->getInt64(kolang::PRECISION));
 }
 
 }; // namespace kolang

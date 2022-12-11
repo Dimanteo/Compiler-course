@@ -82,4 +82,21 @@ IDNode *CompilerCore::makeID(const char *text) {
     return allocateNode<IDNode>(id);
 }
 
+numb_t CompilerCore::convertTextToNumber(const char *text) {
+    char *endptr = nullptr;
+    double value = std::strtod(text, &endptr);
+    if (errno == ERANGE) {
+        std::cerr << "ERROR : Number out of range : " << text << "\n";
+        exit(EXIT_FAILURE);
+    }
+    if (!value && endptr == text) {
+        // This means that lex rule is most likely incorrect
+        std::cerr << "ERROR : Invalid number : " << text << "\n";
+        assert(0 && "Number conversion failed");
+        exit(EXIT_FAILURE);
+    }
+    // Fix precicion integer arithmetic
+    return static_cast<numb_t>(value * kolang::PRECISION);
+}
+
 }; // namespace kolang

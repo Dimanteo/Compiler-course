@@ -6,6 +6,8 @@ fact(n) {
 }
 
 main() {
-    let x = fact(5);
-    return x;
+    let x = scan();
+    let answer = fact(5);
+    print(answer);
+    return 0;
 }

@@ -67,6 +67,7 @@ class NumberNode : public ASTNode {
   public:
     NumberNode(numb_t num) : number(num) {}
     numb_t getNumber() { return number; }
+    void setNumber(numb_t new_num) { number = new_num; }
     IRValue emit() override;
     virtual ~NumberNode() = default;
 };
@@ -78,7 +79,8 @@ class TypeIDNode : public IDNode {
     TypeIDNode(TYPE_ID ty, IDNode *id_node)
         : IDNode(id_node->getID()), type(ty), size(0) {}
     TypeIDNode(TYPE_ID ty, IDNode *id_node, NumberNode *sz)
-        : IDNode(id_node->getID()), type(ty), size(sz->getNumber()) {}
+        : IDNode(id_node->getID()), type(ty),
+          size(kolang::normalize(sz->getNumber())) {}
     TypeIDNode(TYPE_ID ty, ASTNode *id_node, ASTNode *sz)
         : TypeIDNode(ty, dynamic_cast<IDNode *>(id_node),
                      dynamic_cast<NumberNode *>(sz)) {}

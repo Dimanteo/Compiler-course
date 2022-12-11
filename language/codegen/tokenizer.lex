@@ -16,6 +16,7 @@ extern "C" int yylex();
 
 %%
 
+[#].*\n ; // comment
 [;]     { return ENDLN; }
 [+]     { return ADD; }
 [-]     { return SUB; }
@@ -34,9 +35,9 @@ extern "C" int yylex();
 [<]     { return LT; }
 [>]     { return GT; }
 [=]     { return ASSIGN; }
-[0-9]+   { 
-    int64_t val = atoi(yytext);
+[0-9]+(\.[0-9]+)*   { 
     CompilerCore &cc = CompilerCore::getCCore();
+    numb_t val = cc.convertTextToNumber(yytext);
     yylval = cc.make<NumberNode>(val);
     return NUMBER; 
 }

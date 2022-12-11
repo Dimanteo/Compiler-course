@@ -43,6 +43,7 @@ class CompilerCore {
         return allocateNode<T>(std::forward<Args>(args)...);
     }
     IDNode *makeID(const char *text);
+    numb_t convertTextToNumber(const char *text);
 
     // Get IRGenerator
     IRGenerator &getIRG() { return IRG; }
