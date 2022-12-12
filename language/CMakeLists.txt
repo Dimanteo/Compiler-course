@@ -11,8 +11,10 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 
 include_directories(include)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/codegen)
+include_directories(../ir/demo)
 
 add_executable(kolang main.cpp)
 add_subdirectory(lib)
 add_subdirectory(codegen)
-target_link_libraries(kolang codegen lib)
+add_subdirectory(../ir/demo graphics)
+target_link_libraries(kolang codegen lib demo_graphics)

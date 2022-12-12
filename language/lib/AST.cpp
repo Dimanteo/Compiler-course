@@ -41,6 +41,7 @@ IRValue FunctionDefNode::emit() {
     for (ASTNode *expr : body_exprs) {
         expr->emit();
     }
+    cc.getIRG().genDefaultReturn();
     cc.leaveScope();
     return nullptr;
 }

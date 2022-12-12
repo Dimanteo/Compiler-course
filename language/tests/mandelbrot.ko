@@ -1,0 +1,94 @@
+let m_x_max = 0;
+let m_x_min = 1;
+let m_y_max = 2;
+let m_y_min = 3;
+let m_scale = 4;
+let m_x_center = 5;
+let m_y_center = 6;
+
+computePointIter(re, im) {
+    let iter_limit = 100;
+    let inf_border = 2;
+    # z = z^2 + c, where c = re + j * im
+    let z_re = re;
+    let z_im = im;
+
+    let n = 0;
+    while (n < iter_limit) {
+        let sq_z_re = z_re * z_re;
+        let sq_z_im = z_im * z_im;
+        if (sq_z_re + sq_z_re > inf_border * inf_border) {
+            return n;
+        }
+        z_im = 2 * z_im * z_re + im;
+        z_re = sq_z_re - sq_z_im + re;
+        n = n + 1;
+    }
+    return iter_limit;
+}
+
+drawMandelbrotSet(points, width, height, mdb_set[7]) {
+    # Note that x_min and y_min are negative
+    let x_min = mdb_set[m_x_center] + mdb_set[m_x_min] * mdb_set[m_scale];
+    let x_max = mdb_set[m_x_center] + mdb_set[m_x_max] * mdb_set[m_scale];
+    let y_min = mdb_set[m_y_center] + mdb_set[m_y_min] * mdb_set[m_scale];
+    let y_max = mdb_set[m_y_center] + mdb_set[m_y_max] * mdb_set[m_scale];
+
+    let dx = (x_max - x_min) / (width - 1);
+    let dy = (y_max - y_min) / (height - 1);
+
+    let py = 0;
+    while (py < height) {
+        let y = y_min + py * dy;
+        let px = 0;
+        while (px < width) {
+            let n = computePointIter(x_min + px * dx, y);
+            setPixel(points, px, py, n);
+            px = px + 1;
+        }
+        py = py + 1;
+    }
+}
+
+zoom(mdb_set[7]) {
+    mdb_set[m_scale] = mdb_set[m_scale] * 0.8;
+}
+
+main() {
+    let width  = 600;
+    let height = 600;
+
+    # Setting up Mandelbrot params
+    let mdb_set[7]; 
+    mdb_set[m_x_max] = 1.2;                   # x_max
+    mdb_set[m_x_min] = -2.2;                  # x_min
+    mdb_set[m_y_max] = 1.7;                   # y_max
+    mdb_set[m_y_min] = -1.7;                  # y_min
+    mdb_set[m_scale] = 1;                     # scale
+    mdb_set[m_x_center] = -0.7436438870;      # x_center
+    mdb_set[m_y_center] = 0.13182590;         # y_center
+
+    let points = initPixelArray();
+    let window = initWindow(width, height);
+
+    let iterations = 0;
+    let step_number = 35;
+
+    while (step_number != 0 && isOpen(window) == 1) {
+        handleWindowEvents(window);
+
+        if (iterations == 2) {
+            iterations = 0;
+            zoom(mdb_set);
+            drawMandelbrotSet(points, width, height, mdb_set);
+            step_number = step_number - 1;
+        }
+        iterations = iterations + 1;
+
+        draw(window, points);
+        display(window);
+    }
+
+    destrPixelArray(points);
+    destrWindow(window);
+}

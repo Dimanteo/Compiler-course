@@ -96,7 +96,7 @@ numb_t CompilerCore::convertTextToNumber(const char *text) {
         exit(EXIT_FAILURE);
     }
     // Fix precicion integer arithmetic
-    return static_cast<numb_t>(value * kolang::PRECISION);
+    return encode(value);
 }
 
 }; // namespace kolang

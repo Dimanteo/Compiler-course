@@ -34,6 +34,18 @@ void IRGenerator::executeAndFreeModule() {
     std::unordered_map<std::string, void *> func_map;
     func_map["print"] = reinterpret_cast<void *>(__kolang_print);
     func_map["scan"] = reinterpret_cast<void *>(__kolang_scan);
+    func_map["setPixel"] = reinterpret_cast<void *>(__kowrap_setPixel);
+    func_map["handleWindowEvents"] =
+        reinterpret_cast<void *>(__kowrap_handleWindowEvents);
+    func_map["isOpen"] = reinterpret_cast<void *>(__kowrap_isOpen);
+    func_map["draw"] = reinterpret_cast<void *>(__kowrap_draw);
+    func_map["display"] = reinterpret_cast<void *>(__kowrap_display);
+    func_map["destrPixelArray"] =
+        reinterpret_cast<void *>(__kowrap_destrPixelArray);
+    func_map["destrWindow"] = reinterpret_cast<void *>(__kowrap_destrWindow);
+    func_map["initWindow"] = reinterpret_cast<void *>(__kowrap_initWindow);
+    func_map["initPixelArray"] =
+        reinterpret_cast<void *>(__kowrap_initPixelArray);
     ee->InstallLazyFunctionCreator(
         [&func_map](const std::string fn_name) -> void * {
             return func_map[fn_name];
@@ -90,8 +102,9 @@ IRValue IRGenerator::genMul(IRValue lhs, IRValue rhs) {
 }
 
 IRValue IRGenerator::genDiv(IRValue lhs, IRValue rhs) {
-    IRValue div_val = builder->CreateSDiv(lhs, rhs);
-    return builder->CreateMul(div_val, builder->getInt64(kolang::PRECISION));
+    IRValue scaled_lhs =
+        builder->CreateMul(lhs, builder->getInt64(kolang::PRECISION));
+    return builder->CreateSDiv(scaled_lhs, rhs);
 }
 
 IRValue IRGenerator::genNumber(numb_t val) { return builder->getInt64(val); }
@@ -106,6 +119,7 @@ IRValue IRGenerator::allocateLocal() {
 
 IRValue IRGenerator::allocateGlobal(const std::string &name) {
     module->getOrInsertGlobal(name, builder->getInt64Ty());
+    module->getNamedGlobal(name)->setInitializer(builder->getInt64(0));
     return module->getNamedGlobal(name);
 }
 
@@ -127,6 +141,7 @@ void IRGenerator::declFunction(const std::string &name) {
 
 void IRGenerator::declFunction(const std::string &name,
                                const std::vector<TypeIDNode *> &params) {
+    CompilerCore &cc = CompilerCore::getCCore();
     std::vector<Type *> par_types;
     std::vector<strid_t> par_ids;
     for (TypeIDNode *node : params) {
@@ -152,7 +167,6 @@ void IRGenerator::declFunction(const std::string &name,
         Function::Create(f_type, Function::ExternalLinkage, name, *module);
     BasicBlock *bb = BasicBlock::Create(*context, getBBName(), func);
     builder->SetInsertPoint(bb);
-    CompilerCore &cc = CompilerCore::getCCore();
     cc.populateAvailableVariables(par_ids);
     for (size_t i = 0; i < params.size(); ++i) {
         TYPE_ID arg_ty = params[i]->getType();
@@ -276,6 +290,12 @@ IRValue IRGenerator::genLogicalOr(IRValue left, IRValue right) {
 
 IRValue IRGenerator::genLogicalAnd(IRValue left, IRValue right) {
     return builder->CreateAnd(left, right);
+}
+
+void IRGenerator::genDefaultReturn() {
+    if (!builder->GetInsertBlock()->getTerminator()) {
+        genReturn();
+    }
 }
 
 }; // namespace kolang

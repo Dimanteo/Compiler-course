@@ -1,6 +1,24 @@
 #include "graphics.h"
 #include <SFML/Graphics.hpp>
 
+const size_t ITER_MAX = 100;
+const coord_t PRECISION = 1000000;
+
+// Make int from floating point number
+constexpr coord_t getcoord(double x) {
+    return x * PRECISION;
+}
+
+// Fixed precision multiply
+constexpr coord_t mul(coord_t l, coord_t r) {
+    return l * r / PRECISION;
+}
+
+// Fixed precision divide
+constexpr coord_t div(coord_t l, coord_t r) {
+    return l / r * PRECISION;
+}
+
 // Calculate color for Mandelbrot iteration number
 sf::Color getColorForN(uint32_t n);
 

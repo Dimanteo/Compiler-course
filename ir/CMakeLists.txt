@@ -26,4 +26,4 @@ add_executable(irg main.cpp ir.cpp)
 include_directories(demo)
 add_subdirectory(demo)
 
-target_link_libraries(irg LLVM-14 demo_graphics)
+target_link_libraries(irg LLVM-14 mdbset_demo)

@@ -78,6 +78,7 @@ class IRGenerator {
     IRValue genArrayAccess(strid_t id, IRValue index);
     IRValue genLogicalOr(IRValue left, IRValue right);
     IRValue genLogicalAnd(IRValue left, IRValue right);
+    void genDefaultReturn();
 };
 
 }; // namespace kolang
