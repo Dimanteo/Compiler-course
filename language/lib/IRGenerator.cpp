@@ -270,4 +270,12 @@ IRValue IRGenerator::normalize(IRValue val) {
     return builder->CreateSDiv(val, builder->getInt64(kolang::PRECISION));
 }
 
+IRValue IRGenerator::genLogicalOr(IRValue left, IRValue right) {
+    return builder->CreateOr(left, right);
+}
+
+IRValue IRGenerator::genLogicalAnd(IRValue left, IRValue right) {
+    return builder->CreateAnd(left, right);
+}
+
 }; // namespace kolang

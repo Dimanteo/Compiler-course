@@ -34,6 +34,8 @@ extern "C" int yylex();
 [!][=]    { return NEQ; }
 [<]     { return LT; }
 [>]     { return GT; }
+[&][&]  { return AND; }
+[|][|]  { return OR; }
 [=]     { return ASSIGN; }
 [0-9]+(\.[0-9]+)*   { 
     CompilerCore &cc = CompilerCore::getCCore();

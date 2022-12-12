@@ -334,6 +334,20 @@ class ArrayAccessNode : public ASTNode {
     virtual ~ArrayAccessNode() = default;
 };
 
+class LogicalBinaryOp : public BinaryOpBase {
+  public:
+    enum LOGICAL_OP { OR, AND };
+
+  private:
+    LOGICAL_OP operation;
+
+  public:
+    LogicalBinaryOp(ASTNode *left, ASTNode *right, LOGICAL_OP op)
+        : BinaryOpBase(left, right), operation(op) {}
+    IRValue emit() override;
+    virtual ~LogicalBinaryOp() = default;
+};
+
 } // namespace kolang
 
 #endif

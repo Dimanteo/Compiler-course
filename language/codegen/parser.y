@@ -19,7 +19,7 @@ extern int yylineno;
 %token ENDLN
 %token VARDEF
 %token ID
-%token LT GT EQ NEQ LEQ GEQ
+%token LT GT EQ NEQ LEQ GEQ AND OR
 %token ASSIGN
 %token BRA KET FIGBRA FIGKET SQBRA SQKET
 %token COMA
@@ -143,7 +143,21 @@ LoopStatement : WHILE BRA LogicExpression KET FIGBRA Body FIGKET {
     }
 ;
 
-LogicExpression : ArithmeticExpr EQ ArithmeticExpr {
+LogicExpression : LogicExpression OR LogicAndExpr {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<LogicalBinaryOp>($1, $3, LogicalBinaryOp::OR);
+    }
+    | LogicAndExpr
+;
+
+LogicAndExpr : LogicAndExpr AND Predicat {
+        CompilerCore &cc = CompilerCore::getCCore();
+        $$ = cc.make<LogicalBinaryOp>($1, $3, LogicalBinaryOp::AND);
+    }
+    | Predicat
+;
+
+Predicat : ArithmeticExpr EQ ArithmeticExpr {
         CompilerCore &cc = CompilerCore::getCCore();
         $$ = cc.make<EQNode>($1, $3);
     }

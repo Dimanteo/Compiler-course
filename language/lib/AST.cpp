@@ -117,6 +117,11 @@ IRValue IDNode::emit() {
 IRValue VarUseNode::emit() {
     CompilerCore &cc = CompilerCore::getCCore();
     IRValue memory = name->emit();
+    if (IRGenerator::isNIL(memory)) {
+        std::string &name = cc.getStringByID(getID());
+        std::cerr << "ERROR : undefined variable " << name << "\n";
+        exit(EXIT_FAILURE);
+    }
     if (memory->getType()->getContainedType(0)->isArrayTy()) {
         return memory;
     }
@@ -194,6 +199,23 @@ IRValue ArrayUseNode::emit() {
 IRValue ArrayAccessNode::emit() {
     IRGenerator &IRG = CompilerCore::getCCore().getIRG();
     return IRG.genArrayAccess(name->getID(), IRG.normalize(index->emit()));
+}
+
+IRValue LogicalBinaryOp::emit() {
+    IRGenerator &IRG = CompilerCore::getCCore().getIRG();
+    IRValue value = nullptr;
+    switch (operation) {
+    case LOGICAL_OP::OR:
+        value = IRG.genLogicalOr(left->emit(), right->emit());
+        break;
+    case LOGICAL_OP::AND:
+        value = IRG.genLogicalAnd(left->emit(), right->emit());
+        break;
+    default:
+        llvm_unreachable("Impossible logical operation");
+        break;
+    }
+    return value;
 }
 
 } // namespace kolang
