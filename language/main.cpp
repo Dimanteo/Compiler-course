@@ -2,6 +2,7 @@
 #include "parser.hpp"
 
 #include <iostream>
+#include <fstream>
 
 bool parser_main(int argc, char **argv);
 
@@ -12,7 +13,12 @@ int main(int argc, char **argv) {
     }
     kolang::CompilerCore &cc = kolang::CompilerCore::getCCore();
     cc.generateIR();
-    cc.getIRG().dump(std::cout);
-    cc.getIRG().executeAndFreeModule();
+    if (argc > 2) {
+        std::ofstream outs(argv[2]);
+        cc.getIRG().dump(outs);
+    } else {
+        cc.getIRG().dump(std::cout);
+        cc.getIRG().executeAndFreeModule();
+    }
     return 0;
 }
