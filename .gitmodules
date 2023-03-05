@@ -1,0 +1,7 @@
+[submodule "llvm-project"]
+	path = llvm-project
+	url = git@github.com:Dimanteo/llvm-project.git
+	branch = release/14.x
+[submodule "sim2022"]
+	path = sim2022
+	url = git@github.com:Dimanteo/sim2022.git
